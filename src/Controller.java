@@ -39,8 +39,6 @@ public class Controller
                                 String command=firstBuffer.substring(0,firstSpace);
                                 System.out.println("command "+command);
 
-                                Thread.sleep(1000);
-
                                 if(command.equals("put"))
                                 {
                                     int secondSpace=firstBuffer.indexOf(" ",firstSpace+1);
