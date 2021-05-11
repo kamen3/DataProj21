@@ -1,6 +1,10 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.*;
 
 public class Controller
@@ -15,11 +19,15 @@ public class Controller
             final int rebalance_period = Integer.getInteger(args[3]);
 
             ServerSocket ss = new ServerSocket(cport);
+            ConcurrentLinkedQueue<String[]> commandQueue = new ConcurrentLinkedQueue<String[]>();
+            Vector<DStoreIndex> storeIndex = new Vector<DStoreIndex>();
+            ConcurrentHashMap<String, FileIndex> fileIndex = new ConcurrentHashMap<String, FileIndex>();
+            ConcurrentHashMap<Integer, StreamPair> streamIndex = new ConcurrentHashMap<Integer, StreamPair>();
+
             for(;;)
             {
                 try
                 {
-                    System.out.println("waiting for connection");
                     Socket client = ss.accept();
 
                     new Thread(new Runnable()
@@ -28,70 +36,64 @@ public class Controller
                         {
                             try
                             {
-                                System.out.println("connected");
+                                BufferedReader bfin = new BufferedReader(new InputStreamReader (client.getInputStream()));
+                                PrintWriter prout = new PrintWriter(client.getOutputStream(), true);
 
-                                InputStream in = client.getInputStream();
-                                byte[] buf = new byte[1000];
-                                int buflen;
-                                buflen=in.read(buf);
-                                String firstBuffer=new String(buf,0,buflen);
-                                int firstSpace=firstBuffer.indexOf(" ");
-                                String command=firstBuffer.substring(0,firstSpace);
-                                System.out.println("command "+command);
+                                String inpLine;
+                                inpLine = bfin.readLine();
 
-                                if(command.equals("put"))
+                                String[] comArgs = inpLine.split(" ");
+                                String command = comArgs[0];
+
+                                /**
+                                 * DStore joining
+                                 */
+                                if(command.equals(Protocol.JOIN_TOKEN))
                                 {
-                                    int secondSpace=firstBuffer.indexOf(" ",firstSpace+1);
-                                    String fileName=
-                                            firstBuffer.substring(firstSpace+1,secondSpace);
-                                    System.out.println("fileName "+fileName);
-
-                                    File outputFile = new File(fileName);
-                                    FileOutputStream out = new FileOutputStream(outputFile);
-                                    out.write(buf,secondSpace+1,buflen-secondSpace-1);
-
-                                    while ((buflen=in.read(buf)) != -1)
-                                    {
-                                        System.out.print("*");
-                                        out.write(buf,0,buflen);
-                                    }
-
-                                    in.close();
-                                    client.close();
-                                    out.close();
+                                    DStoreIndex newDStore = new DStoreIndex(Integer.parseInt(comArgs[1]), prout, bfin);
+                                    storeIndex.add(newDStore);
+                                    streamIndex.put(Integer.parseInt(comArgs[1]), new StreamPair(bfin, prout));
+                                    /** Rebalance later */
                                 }
 
+                                /** Otherwise it's a client asking for something
+                                 *  And in here there will be the while loops on the streams
+                                 *  cuz they're all just running in different threads.
+                                 *
+                                 *  And once the connection is closed from the client's side
+                                 *  then it is closed on this, too, and the thread terminates.
+                                 *  Beautiful.
+                                 * */
 
-                                else if(command.equals("get"))
+                                /**
+                                 * Client asks for a list
+                                 */
+                                else if(command.equals(Protocol.LIST_TOKEN))
                                 {
-                                    int secondSpace=firstBuffer.indexOf(" ",firstSpace+1);
-                                    String fileName=
-                                            firstBuffer.substring(firstSpace+1,secondSpace);
-                                    System.out.println("fileName "+fileName);
+                                    PrintWriter out = new PrintWriter(client.getOutputStream(), true);
 
-                                    File inputFile = new File(fileName);
-                                    OutputStream out = client.getOutputStream();
-
-                                    if(inputFile.exists())
+                                    if(storeIndex.size() < R)
                                     {
-                                        FileInputStream inf = new FileInputStream(inputFile);
-
-                                        while ((buflen = inf.read(buf)) != -1)
-                                        {
-                                            System.out.print("*");
-                                            out.write(buf, 0, buflen);
-                                        }
-                                        inf.close();
+                                        out.println(Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
+                                        client.close();
                                     }
-                                    else out.write("FILE_DOES_NOT_EXIST".getBytes());
 
-                                    in.close();
+                                    String message = "LIST";
+                                    String[] files = fileIndex.keySet().toString().split(", ");
+
+                                    for(String name: files)
+                                    {
+                                        message += " " + name.substring(1, name.length()-2);
+                                    }
+
+                                    out.println(message);
+
                                     out.close();
                                     client.close();
                                 }
 
 
-                                else System.out.println("unrecognised command");
+                                else System.out.println("unrecognised command");// Will probably have to call logger here
 
 
                             }catch(Exception e){System.out.println("Actually something went wrong somewhere");}

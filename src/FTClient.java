@@ -6,6 +6,10 @@ public class FTClient
     public static void main(String[] args) throws IOException
     {
         System.out.println(args[0]+" "+args[1]+" "+args[2]+" "+args[3]);
+        final int port = Integer.getInteger(args[0]);
+        final int cport = Integer.getInteger(args[1]);
+        final int timeout = Integer.getInteger(args[2]);
+        final String file_folder = args[3];
 
         if(args[1].equals("put"))
         {
