@@ -65,7 +65,8 @@ public class DStoreToClientThread implements Runnable
         try
         {
             clientPrOut.println(Protocol.ACK_TOKEN);
-            fileContent = client.getInputStream().readNBytes(filesize);
+            int readsize = client.getInputStream().readNBytes(fileContent, 0, filesize);
+            if(readsize != filesize) throw new Exception();
         }
         catch(Exception e) {/** Probably log error here */}
 

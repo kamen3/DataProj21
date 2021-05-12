@@ -2,16 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="b710d4eb-24c9-4b3c-ace3-b5e5d427c0c8" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/uiDesigner.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/ControllerThread.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/DStoreToClientThread.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/DStoreToContrThread.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Controller.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Controller.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/DStore.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/DStore.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/FTClient.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/FTServerMultithreaded.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ServiceThread.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/DStoreToClientThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/DStoreToClientThread.java" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
