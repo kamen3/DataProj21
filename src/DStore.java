@@ -1,4 +1,5 @@
 import java.io.*;
+import java.net.ServerSocket;
 import java.net.Socket;
 
 public class DStore
@@ -10,22 +11,21 @@ public class DStore
         final int timeout = Integer.getInteger(args[2]);
         final String file_folder = args[3];
 
-        try
+        ServerSocket ss = new ServerSocket(port);
+        Socket controller = new Socket("localhost", cport);
+        PrintWriter contrPrOut = new PrintWriter(controller.getOutputStream(), true);
+        BufferedReader contrBfIn = new BufferedReader(new InputStreamReader(controller.getInputStream()));
+
+        new Thread(new DStoreToContrThread(port, cport, timeout, file_folder, contrPrOut, contrBfIn)).start();
+
+        for(;;)
         {
-            Socket controller = new Socket("localhost", cport);
-            PrintWriter out = new PrintWriter(controller.getOutputStream(), true);
-            BufferedReader bfin = new BufferedReader(new InputStreamReader (controller.getInputStream()));
-
-            out.println(Protocol.JOIN_TOKEN + " " + Integer.toString(port));
-
-            String line;
-
-            while((line=bfin.readLine()) != null)
+            try
             {
-                System.out.println("liine " + line);
-                /** Functionality upon receiing messages from the Controller */
+                Socket client = ss.accept();
+                new Thread(new DStoreToClientThread(client, port, cport, timeout, file_folder, contrPrOut, contrBfIn)).start();
             }
+            catch(Exception e){}
         }
-        catch(Exception e){System.out.println("error"+e);}
     }
 }
