@@ -23,6 +23,7 @@ public class DStore
             while((line=bfin.readLine()) != null)
             {
                 System.out.println("liine " + line);
+                /** Functionality upon receiing messages from the Controller */
             }
         }
         catch(Exception e){System.out.println("error"+e);}
