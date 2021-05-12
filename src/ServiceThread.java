@@ -3,6 +3,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -15,9 +16,18 @@ class ServiceThread implements Runnable
     private ConcurrentLinkedQueue<String[]> commandQueue;
     private ConcurrentHashMap<String, FileIndex> fileIndex;
     private ConcurrentHashMap<Integer, Socket> storeIndex;
+    Vector<DStoreIndex> storeVector;
+
+    BufferedReader bfin;
+    PrintWriter prout;
+
+    String inpLine;
+    String[] comArgs;
+    String command;
 
     public ServiceThread(Socket client_, int R_, int timeout_, int rebalance_period_, ConcurrentLinkedQueue<String[]> commandQueue_,
-                         ConcurrentHashMap<String, FileIndex> fileIndex_, ConcurrentHashMap<Integer, Socket> storeIndex_)
+                         ConcurrentHashMap<String, FileIndex> fileIndex_, ConcurrentHashMap<Integer, Socket> storeIndex_,
+                         Vector<DStoreIndex> storeVector_)
     {
         client = client_;
         R = R_;
@@ -26,88 +36,59 @@ class ServiceThread implements Runnable
         commandQueue = commandQueue_;
         fileIndex = fileIndex_;
         storeIndex = storeIndex_;
+        storeVector = storeVector_;
     }
 
     public void run()
     {
         try
         {
-            BufferedReader bfin = new BufferedReader(new InputStreamReader(client.getInputStream()));
-            PrintWriter prout = new PrintWriter(client.getOutputStream(), true);
+            bfin = new BufferedReader(new InputStreamReader(client.getInputStream()));
+            prout = new PrintWriter(client.getOutputStream(), true);
 
-            String inpLine;
-            inpLine = bfin.readLine();
-
-            String[] comArgs = inpLine.split(" ");
-            String command = comArgs[0];
-
-            /**
-             * DStore joining
-             */
-            if(command.equals(Protocol.JOIN_TOKEN))
+            while ((inpLine = bfin.readLine()) != null)
             {
-                storeIndex.put(Integer.parseInt(comArgs[1]), client);
-                /** Rebalance later */
+                comArgs = inpLine.split(" ");
+                command = comArgs[0];
+
+                if(command.equals(Protocol.JOIN_TOKEN)) actOnJoin();
+                else if(command.equals(Protocol.LIST_TOKEN)) actOnList();
+                else System.out.println("unrecognised command");// Will probably have to call logger here
             }
 
-            /**
-             * Hmmm... How to write the Client behaviour so that it doesn't depend on what
-             * the first sent line is?
-             * Somehow separate it in a different class? With the line passed into
-             * the constructor?
-             * And all the different behaviour separated into different methods?
-             *
-             *
-             *
-             * Or wait, what if the behaviour is split into different methods  HERE????
-             * **/
+            bfin.close();
+            prout.close();
+            client.close();
+        }
+        catch(Exception e) {System.out.println("uh oh stinkyyyyy");}
+    }
 
+    private void actOnJoin()
+    {
+        storeIndex.put(Integer.parseInt(comArgs[1]), client);
+        /** Rebalance later */
+    }
 
-            /** Otherwise it's a client asking for something
-             *  And in here there will be the while loops on the streams
-             *  cuz they're all just running in different threads.
-             *
-             *  And once the connection is closed from the client's side
-             *  then it is closed on this, too, and the thread terminates.
-             *  Beautiful.
-             * */
-
-            /**
-             * Client asks for a list
-             */
-            else if(command.equals(Protocol.LIST_TOKEN))
+    private void actOnList()
+    {
+        try
+        {
+            if (storeIndex.size() < R)
             {
-                PrintWriter out = new PrintWriter(client.getOutputStream(), true);
-
-                if(storeIndex.size() < R)
-                {
-                    out.println(Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
-                    client.close();
-                }
-
-                String message = "LIST";
-                String[] files = fileIndex.keySet().toString().split(", ");
-
-                for(String name: files)
-                {
-                    message += " " + name.substring(1, name.length()-2);
-                }
-
-                out.println(message);
-
-                out.close();
+                prout.println(Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
                 client.close();
             }
 
-            else if(command.equals(Protocol.STORE_TOKEN))
-            {
+            String message = "LIST";
+            String[] files = fileIndex.keySet().toString().split(", ");
 
+            for (String name : files)
+            {
+                message += " " + name.substring(1, name.length() - 2);
             }
 
-
-            else System.out.println("unrecognised command");// Will probably have to call logger here
-
-
-        }catch(Exception e){System.out.println("Actually something went wrong somewhere");}
+            prout.println(message);
+        }
+        catch(Exception e){System.out.println("uh oh stinky2");}
     }
 }

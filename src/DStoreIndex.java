@@ -1,5 +1,4 @@
-import java.io.BufferedReader;
-import java.io.PrintWriter;
+import java.net.Socket;
 import java.util.Vector;
 
 /** Mine */
@@ -7,14 +6,12 @@ public class DStoreIndex implements Comparable
 {
     private int port;
     private Vector<FileInfoPair> files;
-    private PrintWriter printWrOut;
-    private BufferedReader buffReadIn;
+    private Socket socket;
 
-    public DStoreIndex(int port_, PrintWriter printWrOut_, BufferedReader buffReadIn_)
+    public DStoreIndex(int port_, Socket socket_)
     {
         port = port_;
-        printWrOut = printWrOut_;
-        buffReadIn = buffReadIn_;
+        socket = socket_;
         files = new Vector<FileInfoPair>();
     }
 
@@ -38,15 +35,7 @@ public class DStoreIndex implements Comparable
         return files;
     }
 
-    public PrintWriter getPrintWrOut()
-    {
-        return printWrOut;
-    }
-
-    public BufferedReader getBuffReadIn()
-    {
-        return buffReadIn;
-    }
+    public Socket getSocket() { return socket; }
 
     @Override
     public int compareTo(Object o)

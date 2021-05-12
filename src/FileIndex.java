@@ -1,31 +1,29 @@
 import java.util.Vector;
 
 /** Mine */
-public class FileIndex implements Comparable
+public class FileIndex
 {
-    private String filename;
     private Integer filesize;
     private Vector<Integer> DStores; // the ports
 
-    public FileIndex(String filename_)
+    public FileIndex(int filesize_)
     {
-        filename = filename_;
+        filesize = filesize_;
         DStores = new Vector<Integer>();
     }
 
-    public String getFilename()
+    public Vector<Integer> getDStores()
     {
-        return filename;
+        return DStores;
     }
 
-    @Override
-    public int compareTo(Object o)
+    public void addNewDStore(int port)
     {
-        String oname = ((FileIndex)o).getFilename();
-        int comp = filename.compareTo(oname);
+        DStores.add(port);
+    }
 
-        if(comp == 1) return 1;
-        if(comp == -1) return -1;
-        return 0;
+    public void removeDStore(Integer port)
+    {
+        DStores.remove((Object)port);
     }
 }
