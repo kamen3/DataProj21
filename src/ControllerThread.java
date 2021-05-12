@@ -106,11 +106,15 @@ class ControllerThread implements Runnable
 
             /** Should I check for timeout here??????? */
             String message = "LIST";
-            String[] files = fileIndex.keySet().toString().split(", ");
 
-            for (String name : files)
+            if(!fileIndex.keySet().isEmpty())
             {
-                message += " " + name.substring(1, name.length() - 2);
+                String[] files = fileIndex.keySet().toString().split(", ");
+
+                for (String name : files)
+                {
+                    message += " " + name.substring(1, name.length() - 2);
+                }
             }
 
             prout.println(message);

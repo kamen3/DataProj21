@@ -10,14 +10,14 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Controller
 {
-    public static void main(String[] args) throws IOException
+    public static void main(String[] args)
     {
         try
         {
-            final int cport = Integer.getInteger(args[0]);
-            final int R = Integer.getInteger(args[1]);
-            final int timeout = Integer.getInteger(args[2]);
-            final int rebalance_period = Integer.getInteger(args[3]);
+            int cport = Integer.parseInt(args[0]);
+            int R = Integer.parseInt(args[1]);
+            int timeout = Integer.parseInt(args[2]);
+            int rebalance_period = Integer.parseInt(args[3]);
 
             ReentrantLock loadLock = new ReentrantLock(true);
             ReentrantLock storeLock = new ReentrantLock(true);
@@ -52,7 +52,7 @@ public class Controller
                     new Thread(new ControllerThread(client, R, timeout, rebalance_period, commandQueue, fileIndex, fileIndexInProg,
                             storeIndex, receivedStoreACKs, storeVector, loadLock, storeLock, removeLock, rebalanceLock, storesInProg)).start();
                 }
-                catch(Exception e){System.out.println("error "+e);}
+                catch(Exception e){System.out.println("error22 "+e);}
             }
         }
         catch(Exception e){System.out.println("error "+e);}

@@ -6,9 +6,9 @@ public class DStore
 {
     public static void main(String[] args) throws IOException
     {
-        final int port = Integer.getInteger(args[0]);
-        final int cport = Integer.getInteger(args[1]);
-        final int timeout = Integer.getInteger(args[2]);
+        final int port = Integer.parseInt(args[0]);
+        final int cport = Integer.parseInt(args[1]);
+        final int timeout = Integer.parseInt(args[2]);
         final String file_folder = args[3];
 
         ServerSocket ss = new ServerSocket(port);
