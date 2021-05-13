@@ -85,12 +85,13 @@ class ControllerThread implements Runnable
             prout.close();
             client.close();
         }
-        catch(Exception e) {System.out.println("uh oh stinkyyyyy");}
+        catch(Exception e) {System.out.println("uh oh stinkyyyyy   "  + e);}
     }
 
     private void actOnJoin()
     {
         storeIndex.put(Integer.parseInt(comArgs[1]), client);
+        storeVector.add(new DStoreIndex(Integer.parseInt(comArgs[1])));
         /** Rebalance later */
     }
 
@@ -104,8 +105,8 @@ class ControllerThread implements Runnable
                 return;
             }
 
-            /** Should I check for timeout here??????? */
             String message = "LIST";
+            int start, end;
 
             if(!fileIndex.keySet().isEmpty())
             {
@@ -113,10 +114,13 @@ class ControllerThread implements Runnable
 
                 for (String name : files)
                 {
-                    message += " " + name.substring(1, name.length() - 2);
+                    start = 0;
+                    if(name.charAt(0) == '[') start++;
+                    end = name.length() - 1;
+                    if(name.charAt(name.length() - 1) != ']') end++;
+                    message += " " + name.substring(start, end);
                 }
             }
-
             prout.println(message);
         }
         catch(Exception e){System.out.println("uh oh stinky2");}
@@ -149,30 +153,21 @@ class ControllerThread implements Runnable
 
         fileIndexInProg.add(filename);
 
+
         try
         {
             if (storeLock.tryLock(1, TimeUnit.DAYS)) // Just wait until it's available
             {
                 storeVector.sort(null); // Sort to be able to get the least full DStores
-                DStoreIndex[] curDStores = (DStoreIndex[]) storeVector.toArray();
                 String message = Protocol.STORE_TO_TOKEN;
-                Vector<DStoreIndex> newVec = new Vector<DStoreIndex>();
                 FileIndex fileInfo = new FileIndex(filesize);
 
                 for (int i = 0; i < R; i++)
                 {
-                    message += " " + Integer.toString(curDStores[i].getPort());
-                    curDStores[i].addFile(new FileInfoPair(filename, filesize));
-                    newVec.add(curDStores[i]);
-                    fileInfo.addNewDStore(curDStores[i].getPort());
+                    message += " " + Integer.toString(storeVector.get(i).getPort());
+                    storeVector.get(i).addFile(new FileInfoPair(filename, filesize));
+                    fileInfo.addNewDStore(storeVector.get(i).getPort());
                 }
-                for (int i = R; i < curDStores.length; i++)
-                {
-                    newVec.add(curDStores[i]);
-                }
-
-                storeVector.clear();
-                storeVector.addAll(newVec);
 
                 /** Release the lock */
                 storeLock.unlock();
@@ -181,21 +176,29 @@ class ControllerThread implements Runnable
 
                 prout.println(message);
 
-                Thread.sleep(timeout);
-
-                if (receivedStoreACKs.get(filename).size() == R)
+                long startTime = System.currentTimeMillis();
+                Boolean flag=true;
+                while((System.currentTimeMillis() - startTime) <= timeout)
                 {
-                    prout.println(Protocol.STORE_COMPLETE_TOKEN);
-                    receivedStoreACKs.remove(filename); // Ditto?
-                    fileIndexInProg.remove(filename); // By leaving it here otherwise, it could be used to know it should be removed in rebalancing!
-                    fileIndex.put(filename, fileInfo);
+                    if (receivedStoreACKs.get(filename).size() == R)
+                    {
+                        flag = false;
+                        prout.println(Protocol.STORE_COMPLETE_TOKEN);
+                        receivedStoreACKs.remove(filename); // Ditto?
+                        fileIndexInProg.remove(filename); // By leaving it here otherwise, it could be used to know it should be removed in rebalancing!
+                        fileIndex.put(filename, fileInfo);
+                        break;
+                    }
                 }
-                /** Otherwise, do nothing */
+                if(flag)
+                {
+                    /** If timed out, do nothing */
+                }
 
                 storesInProg.decrementAndGet();
             }
         }
-        catch(Exception e) {}
+        catch(Exception e) {System.out.println("stinkyyy" + e);}
     }
 
     public void actOnStoreAck()

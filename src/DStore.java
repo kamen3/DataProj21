@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Paths;
 
 public class DStore
 {
@@ -10,6 +11,9 @@ public class DStore
         final int cport = Integer.parseInt(args[1]);
         final int timeout = Integer.parseInt(args[2]);
         final String file_folder = args[3];
+
+        File folder = new File(Paths.get(".").toAbsolutePath().normalize().toString() + File.separator + file_folder);
+        folder.mkdirs();
 
         ServerSocket ss = new ServerSocket(port);
         Socket controller = new Socket("localhost", cport);

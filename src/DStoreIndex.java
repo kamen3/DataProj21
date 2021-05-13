@@ -6,12 +6,11 @@ public class DStoreIndex implements Comparable
 {
     private int port;
     private Vector<FileInfoPair> files;
-    private Socket socket;
+    //private Socket socket; unnecessary - can be looked up in storeIndex using the port number
 
-    public DStoreIndex(int port_, Socket socket_)
+    public DStoreIndex(int port_)
     {
         port = port_;
-        socket = socket_;
         files = new Vector<FileInfoPair>();
     }
 
@@ -34,8 +33,6 @@ public class DStoreIndex implements Comparable
     {
         return files;
     }
-
-    public Socket getSocket() { return socket; }
 
     @Override
     public int compareTo(Object o)

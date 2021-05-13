@@ -60,33 +60,26 @@ public class DStoreToClientThread implements Runnable
 
         String filename = comArgs[1];
         int filesize = Integer.parseInt(comArgs[2]);
-        byte[] fileContent = null;
+        byte[] fileContent = new byte[filesize];
 
         try
         {
             clientPrOut.println(Protocol.ACK_TOKEN);
             int readsize = client.getInputStream().readNBytes(fileContent, 0, filesize);
-            if(readsize != filesize) throw new Exception();
-        }
-        catch(Exception e) {/** Probably log error here */}
+            if(readsize != filesize) throw new Exception("file"  + filename + " received malformed");
 
-        File file = new File(Paths.get(".").toAbsolutePath().normalize().toString() + File.separator +
-                file_folder + File.separator + filename);
+            File file = new File(Paths.get(".").toAbsolutePath().normalize().toString() + File.separator +
+                    file_folder + File.separator + filename);
+            file.createNewFile();
 
-        try
-        {
             FileOutputStream fileOut = new FileOutputStream(file);
             fileOut.write(fileContent);
             fileOut.close();
-        }
-        catch(Exception e) {}
 
-        contrPrOut.println(Protocol.STORE_ACK_TOKEN);
+            contrPrOut.println(Protocol.STORE_ACK_TOKEN + " " + filename);
 
-        try
-        {
             client.close();
         }
-        catch(Exception e){}
+        catch(Exception e) {System.out.println("Excuse me, " + e);}
     }
 }
