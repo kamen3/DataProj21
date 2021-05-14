@@ -21,10 +21,10 @@ class ControllerThread implements Runnable
     private Vector<String> fileIndexInProg;
     private ConcurrentHashMap<Integer, Socket> storeIndex;
     private Vector<DStoreIndex> storeVector;
-    private ConcurrentHashMap<String, Vector<Integer>> receivedStoreACKs;
+    private ConcurrentHashMap<String, Vector<Integer>> receivedStoreACKs, receivedRemoveACKs;
 
-    ReentrantLock loadLock, storeLock, removeLock, rebalanceLock;
-    AtomicInteger storesInProg;
+    ReentrantLock loadLock, storeVectorChangeLock, rebalanceLock;
+    AtomicInteger storesInProg, removesInProg;
 
     BufferedReader bfin;
     PrintWriter prout;
@@ -33,13 +33,15 @@ class ControllerThread implements Runnable
     String[] comArgs;
     String command;
 
+    /** Should have just made it extend Controller, but oh well... */
     public ControllerThread(Socket client_, int R_, int timeout_, int rebalance_period_, ConcurrentLinkedQueue<String[]> commandQueue_,
                             ConcurrentHashMap<String, FileIndex> fileIndex_, Vector<String> fileIndexInProg_,
                             ConcurrentHashMap<Integer, Socket> storeIndex_,
                             ConcurrentHashMap<String, Vector<Integer>> receivedStoreACKs_,
-                            Vector<DStoreIndex> storeVector_, ReentrantLock loadLock_, ReentrantLock storeLock_,
-                            ReentrantLock removeLock_, ReentrantLock rebalanceLock_,
-                            AtomicInteger storesInProg_)
+                            ConcurrentHashMap<String, Vector<Integer>> receivedRemoveACKs_,
+                            Vector<DStoreIndex> storeVector_, ReentrantLock loadLock_, ReentrantLock storeVectorChangeLock_,
+                            ReentrantLock rebalanceLock_,
+                            AtomicInteger storesInProg_, AtomicInteger removesInProg_)
     {
         client = client_;
         R = R_;
@@ -50,12 +52,13 @@ class ControllerThread implements Runnable
         fileIndexInProg = fileIndexInProg_;
         storeIndex = storeIndex_;
         receivedStoreACKs = receivedStoreACKs_;
+        receivedRemoveACKs = receivedRemoveACKs_;
         storeVector = storeVector_;
         loadLock = loadLock_;
-        storeLock = storeLock_;
-        removeLock = removeLock_;
+        storeVectorChangeLock = storeVectorChangeLock_;
         rebalanceLock = rebalanceLock_;
         storesInProg = storesInProg_;
+        removesInProg = removesInProg_;
     }
 
     public void run()
@@ -78,6 +81,9 @@ class ControllerThread implements Runnable
                 else if(command.equals(Protocol.LIST_TOKEN)) actOnList(); // Client
                 else if(command.equals(Protocol.STORE_TOKEN)) actOnStore(); // Client
                 else if(command.equals(Protocol.STORE_ACK_TOKEN)) actOnStoreAck(); // DStore
+                else if(command.equals(Protocol.REMOVE_TOKEN)) actOnRemove(); // Client
+                else if(command.equals(Protocol.REMOVE_ACK_TOKEN)) actOnRemoveAck(); // DStore
+                else if(command.equals(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN)) actOnErrorFileNotExist(); // DStore
                 else System.out.println("unrecognised command");// Will probably have to call logger here
             }
 
@@ -153,10 +159,11 @@ class ControllerThread implements Runnable
 
         fileIndexInProg.add(filename);
 
+        /** In rebalancing, will have to make the thread snatch all the locks, lol */
 
         try
         {
-            if (storeLock.tryLock(1, TimeUnit.DAYS)) // Just wait until it's available
+            if (storeVectorChangeLock.tryLock(1, TimeUnit.DAYS)) // Just wait until it's available
             {
                 storeVector.sort(null); // Sort to be able to get the least full DStores
                 String message = Protocol.STORE_TO_TOKEN;
@@ -165,12 +172,12 @@ class ControllerThread implements Runnable
                 for (int i = 0; i < R; i++)
                 {
                     message += " " + Integer.toString(storeVector.get(i).getPort());
-                    storeVector.get(i).addFile(new FileInfoPair(filename, filesize));
+                    storeVector.get(i).addFile(filename, filesize);
                     fileInfo.addNewDStore(storeVector.get(i).getPort());
                 }
 
                 /** Release the lock */
-                storeLock.unlock();
+                storeVectorChangeLock.unlock();
 
                 receivedStoreACKs.put(filename, new Vector<Integer>());
 
@@ -201,8 +208,97 @@ class ControllerThread implements Runnable
         catch(Exception e) {System.out.println("stinkyyy" + e);}
     }
 
-    public void actOnStoreAck()
+    private void actOnStoreAck()
     {
         receivedStoreACKs.get(comArgs[1]).add(client.getPort()); // Should work??????? although tbf it might not matter
+    }
+
+    private void actOnRemove()
+    {
+        if (storeIndex.size() < R)
+        {
+            prout.println(Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
+            return;
+        }
+
+        if(comArgs.length != 2)
+        {
+            /** Log later */
+            return;
+        }
+
+        String filename = comArgs[1];
+
+        if(!fileIndex.containsKey(filename) || fileIndexInProg.contains(filename) )
+        {
+            prout.println(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
+            return;
+        }
+
+        removesInProg.incrementAndGet();
+
+        fileIndex.remove(filename);
+        fileIndexInProg.add(filename);
+
+        try
+        {
+            if (storeVectorChangeLock.tryLock(1, TimeUnit.DAYS)) // Just wait until it's available
+            {
+                for(int i=0; i<storeVector.size(); i++)
+                {
+                    storeVector.get(i).removeFile(filename);
+                }
+
+                /** Release the lock */
+                storeVectorChangeLock.unlock();
+
+                FileIndex fileInfo = fileIndex.get(filename);
+                fileIndex.remove(filename);
+                Vector<Integer> DStorePorts = fileInfo.getDStores();
+
+                receivedRemoveACKs.put(filename, new Vector<Integer>());
+                PrintWriter DStorePrWr;
+
+                for(int i=0; i<DStorePorts.size(); i++)
+                {
+                    DStorePrWr = new PrintWriter(storeIndex.get(DStorePorts.get(i)).getOutputStream(), true);
+                    DStorePrWr.println(Protocol.REMOVE_TOKEN + " " + filename);
+                }
+
+                long startTime = System.currentTimeMillis();
+                Boolean flag=true;
+                while((System.currentTimeMillis() - startTime) <= timeout)
+                {
+                    if (receivedRemoveACKs.get(filename).size() == R)
+                    {
+                        flag = false;
+                        fileIndexInProg.remove(filename); // By leaving it here otherwise, it could be used to know it should be removed in rebalancing!
+                        break;
+                    }
+                }
+
+                if(flag)
+                {
+                    /** If timed out, "log error" */
+                }
+
+                prout.println(Protocol.REMOVE_COMPLETE_TOKEN);
+                receivedRemoveACKs.remove(filename); // Ditto?
+
+                removesInProg.decrementAndGet();
+            }
+        }
+        catch(Exception e) {System.out.println("stinkyyy2" + e);}
+    }
+
+    private void actOnRemoveAck()
+    {
+        receivedRemoveACKs.get(comArgs[1]).add(client.getPort()); // Should work??????? although tbf it might not matter
+    }
+
+    private void actOnErrorFileNotExist()
+    {
+        /** Logging perhaps which DStore threw the error*/
+        receivedRemoveACKs.get(comArgs[1]).add(client.getPort()); // I mean, if it already doesn't exist, no reason to forbid others from storing a file with the same name
     }
 }

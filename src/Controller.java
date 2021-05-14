@@ -20,11 +20,11 @@ public class Controller
             int rebalance_period = Integer.parseInt(args[3]);
 
             ReentrantLock loadLock = new ReentrantLock(true);
-            ReentrantLock storeLock = new ReentrantLock(true);
-            ReentrantLock removeLock = new ReentrantLock(true);
+            ReentrantLock storeVectorChangeLock = new ReentrantLock(true);
             ReentrantLock rebalanceLock = new ReentrantLock(true);
 
             AtomicInteger storesInProg = new AtomicInteger(0);
+            AtomicInteger removesInProg = new AtomicInteger(0);
 
             ServerSocket ss = new ServerSocket(cport);
             ConcurrentLinkedQueue<String[]> commandQueue = new ConcurrentLinkedQueue<String[]>();
@@ -36,6 +36,7 @@ public class Controller
             Vector<String> fileIndexInProg = new Vector<String>();
 
             ConcurrentHashMap<String, Vector<Integer>> receivedStoreACKs = new ConcurrentHashMap<String, Vector<Integer>>();
+            ConcurrentHashMap<String, Vector<Integer>> receivedRemoveACKs = new ConcurrentHashMap<String, Vector<Integer>>();
 
             // Will be used for quick access to stores, based on their socket number
             ConcurrentHashMap<Integer, Socket> storeIndex = new ConcurrentHashMap<Integer, Socket>();
@@ -50,7 +51,8 @@ public class Controller
                     Socket client = ss.accept();
 
                     new Thread(new ControllerThread(client, R, timeout, rebalance_period, commandQueue, fileIndex, fileIndexInProg,
-                            storeIndex, receivedStoreACKs, storeVector, loadLock, storeLock, removeLock, rebalanceLock, storesInProg)).start();
+                            storeIndex, receivedStoreACKs, receivedRemoveACKs, storeVector, loadLock, storeVectorChangeLock, rebalanceLock, storesInProg,
+                            removesInProg)).start();
                 }
                 catch(Exception e){System.out.println("error22 "+e);}
             }
