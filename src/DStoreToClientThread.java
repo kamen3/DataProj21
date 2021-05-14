@@ -43,7 +43,6 @@ public class DStoreToClientThread implements Runnable
                 command = comArgs[0];
 
                 if(command.equals(Protocol.STORE_TOKEN)) actOnStore();
-                if(command.equals(Protocol.REMOVE_TOKEN)) actOnRemove();
 
                 //else System.out.println("unrecognised command");// Will probably have to call logger here
             }
@@ -83,33 +82,4 @@ public class DStoreToClientThread implements Runnable
         }
         catch(Exception e) {System.out.println("Excuse me, " + e);}
     }
-
-    private void actOnRemove()
-    {
-        if(comArgs.length != 2)
-        {
-            /** Do some logging */
-            return;
-        }
-
-        String filename = comArgs[1];
-
-        try
-        {
-            File file = new File(Paths.get(".").toAbsolutePath().normalize().toString() + File.separator +
-                    file_folder + File.separator + filename);
-
-            if(!file.exists())
-            {
-                contrPrOut.println(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
-                return;
-            }
-
-            file.delete();
-
-            contrPrOut.println(Protocol.REMOVE_ACK_TOKEN + " " + filename);
-        }
-        catch(Exception e) {System.out.println("Excuse me, " + e);}
-    }
-
 }

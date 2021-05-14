@@ -91,7 +91,7 @@ class ControllerThread implements Runnable
             prout.close();
             client.close();
         }
-        catch(Exception e) {System.out.println("uh oh stinkyyyyy   "  + e);}
+        catch(Exception e) {System.out.println("uuh oh stinkyyyyy"); e.printStackTrace();}
     }
 
     private void actOnJoin()
@@ -129,7 +129,7 @@ class ControllerThread implements Runnable
             }
             prout.println(message);
         }
-        catch(Exception e){System.out.println("uh oh stinky2");}
+        catch(Exception e){System.out.println("uh oh stinky2"); e.printStackTrace();}
     }
 
     private void actOnStore()
@@ -200,12 +200,13 @@ class ControllerThread implements Runnable
                 if(flag)
                 {
                     /** If timed out, do nothing */
+                    System.out.println("Timed out storing");
                 }
 
                 storesInProg.decrementAndGet();
             }
         }
-        catch(Exception e) {System.out.println("stinkyyy" + e);}
+        catch(Exception e) {System.out.println("stinkyyy"); e.printStackTrace();}
     }
 
     private void actOnStoreAck()
@@ -237,6 +238,7 @@ class ControllerThread implements Runnable
 
         removesInProg.incrementAndGet();
 
+        FileIndex fileInfo = fileIndex.get(filename);
         fileIndex.remove(filename);
         fileIndexInProg.add(filename);
 
@@ -252,8 +254,6 @@ class ControllerThread implements Runnable
                 /** Release the lock */
                 storeVectorChangeLock.unlock();
 
-                FileIndex fileInfo = fileIndex.get(filename);
-                fileIndex.remove(filename);
                 Vector<Integer> DStorePorts = fileInfo.getDStores();
 
                 receivedRemoveACKs.put(filename, new Vector<Integer>());
@@ -279,6 +279,7 @@ class ControllerThread implements Runnable
 
                 if(flag)
                 {
+                    System.out.println("Timed out removing");
                     /** If timed out, "log error" */
                 }
 
@@ -288,7 +289,7 @@ class ControllerThread implements Runnable
                 removesInProg.decrementAndGet();
             }
         }
-        catch(Exception e) {System.out.println("stinkyyy2" + e);}
+        catch(Exception e) {System.out.println("stinkyyy2"); e.printStackTrace();}
     }
 
     private void actOnRemoveAck()
@@ -299,6 +300,7 @@ class ControllerThread implements Runnable
     private void actOnErrorFileNotExist()
     {
         /** Logging perhaps which DStore threw the error*/
-        receivedRemoveACKs.get(comArgs[1]).add(client.getPort()); // I mean, if it already doesn't exist, no reason to forbid others from storing a file with the same name
+        //receivedRemoveACKs.get(comArgs[1]).add(client.getPort());
+        // I mean, if it already doesn't exist, no reason to forbid others from storing a file with the same name
     }
 }
