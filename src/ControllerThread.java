@@ -100,6 +100,12 @@ class ControllerThread implements Runnable
                 else if(command.equals(Protocol.RELOAD_TOKEN)) actOnReload(); // Client
                 else if(command.equals(Protocol.REBALANCE_COMPLETE_TOKEN)) receivedACKRebalances.add(1);
                 else System.out.println("unrecognised command");// Will probably have to call logger here
+
+                if(client.isClosed())
+                {
+                    System.out.println("Well, darn " + client.getPort());
+                    return;
+                }
             }
 
             bfin.close();

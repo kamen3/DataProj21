@@ -49,6 +49,7 @@ class ControllerRebalanceDStoreThread implements Runnable
 
             prout.println(Protocol.LIST_TOKEN);
 
+            if(DStoreSocket.isClosed()) return;
             inpLine = bfin.readLine();
             comArgs = inpLine.split(" ");
 
@@ -69,10 +70,7 @@ class ControllerRebalanceDStoreThread implements Runnable
             currentDStoreList.put(port, files);
 
             flag.set(false);
-
-            bfin.close();
-            prout.close();
         }
-        catch(Exception e) {System.out.println("uuh oh stinkyyyyy"); e.printStackTrace();}
+        catch(Exception e) {System.out.println("uuh oh stinkyyyyyyyyyyyyyyyyyyyyyyy"); e.printStackTrace();}
     }
 }

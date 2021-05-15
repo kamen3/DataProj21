@@ -40,8 +40,9 @@ public class DStoreToContrThread implements Runnable
 
                 /** Wait for input from controller */
                 if(command.equals(Protocol.REMOVE_TOKEN)) actOnRemove();
-                if(command.equals(Protocol.REBALANCE_TOKEN)); actOnRebalance();
-
+                else if(command.equals(Protocol.REBALANCE_TOKEN)) actOnRebalance();
+                else if(command.equals(Protocol.LIST_TOKEN)) actOnList();
+                else System.out.println("Some unknown command given from Controller");
             }
         }
         catch(Exception e) {}
@@ -102,5 +103,20 @@ public class DStoreToContrThread implements Runnable
         }
 
         contrPrOut.println(Protocol.REBALANCE_COMPLETE_TOKEN);
+    }
+
+    private void actOnList()
+    {
+        String message = Protocol.LIST_TOKEN;
+
+        File folder = new File(Paths.get(".").toAbsolutePath().normalize().toString() + File.separator +
+                file_folder);
+        File[] files = folder.listFiles();
+        for(File file : files)
+        {
+            message += " " + file.getName();
+        }
+
+        contrPrOut.println(message);
     }
 }

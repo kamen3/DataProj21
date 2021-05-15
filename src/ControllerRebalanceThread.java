@@ -87,7 +87,7 @@ class ControllerRebalanceThread implements Runnable
         {
             for(;;)
             {
-                if(System.currentTimeMillis() - lastRebalance.get() >= rebalance_period || waitingDStores.size()>0)
+                if((System.currentTimeMillis() - lastRebalance.get() >= rebalance_period || waitingDStores.size()>0))
                 {
                     if (storeVectorChangeLock.tryLock(1, TimeUnit.DAYS)) // Just wait until it's available
                     {
@@ -104,6 +104,12 @@ class ControllerRebalanceThread implements Runnable
                         {
                             storeIndex.put(waitingDStoresInfos[i].getPort(), waitingDStoresInfos[i].getSocket());
                             storeVector.add(new DStoreIndex(waitingDStoresInfos[i].getPort()));
+                        }
+
+                        if(storeVector.size() < R)
+                        {
+                            storeVectorChangeLock.unlock();
+                            continue;
                         }
 
                         Vector<Integer> closedDStores = new Vector<Integer>();
@@ -148,6 +154,8 @@ class ControllerRebalanceThread implements Runnable
                         {
                             if(closedDStores.contains(vector[i].getPort())) storeVector.removeElement(vector[i]);
                         }
+
+                        System.out.println("And 6");
 
                         /** So check if there's any files below R, and fill up the numbers by redistributing them randomly,
                          *  and do that by simply starting to build the messages early and including that info there
@@ -221,6 +229,8 @@ class ControllerRebalanceThread implements Runnable
                             int curDStore = storeVector.get(i).getPort();
                             Vector<String> actualFiles = currentDStoreList.get(curDStore);
 
+                            if(actualFiles == null) continue;
+                            System.out.println("Port " + curDStore + " has " + actualFiles.size());
                             for(int y=0; y<actualFiles.size(); y++)
                             {
                                 String file = actualFiles.get(y);
@@ -293,6 +303,7 @@ class ControllerRebalanceThread implements Runnable
                          * Think carefully
                          * */
 
+                        storeVectorChangeLock.unlock();
                         lastRebalance.set(System.currentTimeMillis());
                     }
                 }
@@ -321,7 +332,42 @@ class ControllerRebalanceThread implements Runnable
                 for (;;)
                 {
                     String file = highDStoreFiles.get(new Random().nextInt(highDStoreFiles.size()));
-                    if (!filesToReceive.get(highDStore.getPort()).contains(file) && !toSend.contains(file))
+                    int tmpport = highDStore.getPort();
+
+                    if(!filesToReceive.containsKey(tmpport) && !toSend.contains(file))
+                    {
+                        toSend.add(file);
+                        lowNum++;
+                        highNum--;
+
+                        if(!commandsToSend.containsKey(highPort))
+                        {
+                            HashMap<String, Vector<Integer>> tmp = new HashMap<String, Vector<Integer>>();
+                            Vector<Integer> tmp2 = new Vector<Integer>();
+                            tmp2.add(lowPort);
+                            tmp.put(file,tmp2);
+                            commandsToSend.put(highPort, tmp);
+                        }
+                        else if(!commandsToSend.get(highPort).containsKey(file))
+                        {
+                            Vector<Integer> tmp = new Vector<Integer>();
+                            tmp.add(lowPort);
+                            commandsToSend.get(highPort).put(file, tmp);
+                        }
+                        else commandsToSend.get(highPort).get(file).add(lowPort);
+
+                        if(!commandsToRemove.containsKey(highPort))
+                        {
+                            Vector<String> tmp = new Vector<String>();
+                            tmp.add(file);
+                            commandsToRemove.put(highPort, tmp);
+                        }
+                        else commandsToRemove.get(highPort).add(file);
+
+                        break;
+                    }
+
+                    else if (!filesToReceive.get(tmpport).contains(file) && !toSend.contains(file))
                     {
                         toSend.add(file);
                         lowNum++;

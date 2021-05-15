@@ -31,36 +31,46 @@ class ControllerRebalanceDStoreThread2 implements Runnable
     {
         try
         {
+            if(DStoreSocket.isClosed()) return;
+
             bfin = new BufferedReader(new InputStreamReader(DStoreSocket.getInputStream()));
             prout = new PrintWriter(DStoreSocket.getOutputStream(), true);
 
             String message = Protocol.REBALANCE_TOKEN;
 
-            String[] filenamesSend = new String[send.keySet().size()];
-            send.keySet().toArray(filenamesSend);
-
-            message += " " + send.size();
-
-            for(int i=0; i<filenamesSend.length; i++)
+            if(send != null)
             {
-                message += " " + filenamesSend[i];
+                String[] filenamesSend = new String[send.size()];
+                if (send.size() != 0) send.keySet().toArray(filenamesSend);
 
-                Vector<Integer> ports = send.get(filenamesSend[i]);
+                message += " " + send.size();
 
-                message += " " + ports.size();
-
-                for(int y=0; y<ports.size(); y++)
+                for (int i = 0; i < filenamesSend.length; i++)
                 {
-                    message += " " + ports.get(y);
+                    message += " " + filenamesSend[i];
+
+                    Vector<Integer> ports = send.get(filenamesSend[i]);
+
+                    message += " " + ports.size();
+
+                    for (int y = 0; y < ports.size(); y++)
+                    {
+                        message += " " + ports.get(y);
+                    }
                 }
             }
+            else message += " 0";
 
-            message += " " + remove.size();
-
-            for(int i=0; i<remove.size(); i++)
+            if(remove != null)
             {
-                message += " " + remove.get(i);
+                message += " " + remove.size();
+
+                for (int i = 0; i < remove.size(); i++)
+                {
+                    message += " " + remove.get(i);
+                }
             }
+            else message += " 0";
 
             prout.println(message);
         }
