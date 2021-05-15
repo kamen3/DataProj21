@@ -1,21 +1,24 @@
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Mine */
 public class DStoreIndex implements Comparable
 {
     private int port;
-    private ConcurrentHashMap<String, Integer> files;
+    private Vector<String> files;
     //private Socket socket; unnecessary - can be looked up in storeIndex using the port number
 
     public DStoreIndex(int port_)
     {
         port = port_;
-        files = new ConcurrentHashMap<String, Integer>();
+        files = new Vector<String>();
     }
 
-    public void addFile(String filename, int filesize) { files.put(filename, filesize); }
+    public void addFile(String filename) { files.add(filename); }
 
     public void removeFile(String filename) { files.remove(filename); }
+
+    public void removeFiles(Vector<String> filenames) { files.removeAll(filenames); }
 
     public int getPort()
     {
@@ -27,7 +30,7 @@ public class DStoreIndex implements Comparable
         return files.size();
     }
 
-    public ConcurrentHashMap<String, Integer> getFiles()
+    public Vector<String> getFiles()
     {
         return files;
     }

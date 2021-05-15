@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 class ControllerThread implements Runnable
@@ -22,18 +23,22 @@ class ControllerThread implements Runnable
     private ConcurrentHashMap<Integer, Socket> storeIndex;
     private Vector<DStoreIndex> storeVector;
     private ConcurrentHashMap<String, Vector<Integer>> receivedStoreACKs, receivedRemoveACKs;
+    Vector<Integer> receivedACKRebalances;
 
     private ConcurrentHashMap<String, Integer> loadAttempts;
 
-    ReentrantLock loadLock, storeVectorChangeLock, rebalanceLock;
-    AtomicInteger storesInProg, removesInProg;
+    private ReentrantLock storeVectorChangeLock, rebalanceLock;
+    private AtomicInteger storesInProg, removesInProg;
 
-    BufferedReader bfin;
-    PrintWriter prout;
+    private BufferedReader bfin;
+    private PrintWriter prout;
 
-    String inpLine;
-    String[] comArgs;
-    String command;
+    private String inpLine;
+    private String[] comArgs;
+    private String command;
+
+    private AtomicLong lastRebalance;
+    Vector<JoinDStoreInfoPair> waitingDStores;
 
     /** Should have just made it extend Controller, but oh well... */
     public ControllerThread(Socket client_, int R_, int timeout_, int rebalance_period_, ConcurrentLinkedQueue<String[]> commandQueue_,
@@ -41,9 +46,10 @@ class ControllerThread implements Runnable
                             ConcurrentHashMap<Integer, Socket> storeIndex_,
                             ConcurrentHashMap<String, Vector<Integer>> receivedStoreACKs_,
                             ConcurrentHashMap<String, Vector<Integer>> receivedRemoveACKs_,
-                            Vector<DStoreIndex> storeVector_, ReentrantLock loadLock_, ReentrantLock storeVectorChangeLock_,
+                            Vector<DStoreIndex> storeVector_, ReentrantLock storeVectorChangeLock_,
                             ReentrantLock rebalanceLock_,
-                            AtomicInteger storesInProg_, AtomicInteger removesInProg_)
+                            AtomicInteger storesInProg_, AtomicInteger removesInProg_, AtomicLong lastRebalance_,
+                            Vector<JoinDStoreInfoPair> waitingDStores_, Vector<Integer> receivedACKRebalances_)
     {
         client = client_;
         R = R_;
@@ -56,11 +62,13 @@ class ControllerThread implements Runnable
         receivedStoreACKs = receivedStoreACKs_;
         receivedRemoveACKs = receivedRemoveACKs_;
         storeVector = storeVector_;
-        loadLock = loadLock_;
         storeVectorChangeLock = storeVectorChangeLock_;
         rebalanceLock = rebalanceLock_;
         storesInProg = storesInProg_;
         removesInProg = removesInProg_;
+        lastRebalance = lastRebalance_;
+        waitingDStores = waitingDStores_;
+        receivedACKRebalances = receivedACKRebalances_;
 
         loadAttempts = new ConcurrentHashMap<String, Integer>();
     }
@@ -90,6 +98,7 @@ class ControllerThread implements Runnable
                 else if(command.equals(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN)) actOnErrorFileNotExist(); // DStore
                 else if(command.equals(Protocol.LOAD_TOKEN)) actOnLoad(); // Client
                 else if(command.equals(Protocol.RELOAD_TOKEN)) actOnReload(); // Client
+                else if(command.equals(Protocol.REBALANCE_COMPLETE_TOKEN)) receivedACKRebalances.add(1);
                 else System.out.println("unrecognised command");// Will probably have to call logger here
             }
 
@@ -102,9 +111,8 @@ class ControllerThread implements Runnable
 
     private void actOnJoin()
     {
-        storeIndex.put(Integer.parseInt(comArgs[1]), client);
-        storeVector.add(new DStoreIndex(Integer.parseInt(comArgs[1])));
-        /** Rebalance later */
+        waitingDStores.add(new JoinDStoreInfoPair(Integer.parseInt(comArgs[1]), client));
+        /** Rebalance handled elsewhere */
     }
 
     private void actOnList()
@@ -178,7 +186,7 @@ class ControllerThread implements Runnable
                 for (int i = 0; i < R; i++)
                 {
                     message += " " + Integer.toString(storeVector.get(i).getPort());
-                    storeVector.get(i).addFile(filename, filesize);
+                    storeVector.get(i).addFile(filename);
                     fileInfo.addNewDStore(storeVector.get(i).getPort());
                 }
 

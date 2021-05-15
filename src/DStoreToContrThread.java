@@ -1,10 +1,8 @@
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.nio.file.Paths;
+import java.util.Vector;
 
 public class DStoreToContrThread implements Runnable
 {
@@ -42,6 +40,7 @@ public class DStoreToContrThread implements Runnable
 
                 /** Wait for input from controller */
                 if(command.equals(Protocol.REMOVE_TOKEN)) actOnRemove();
+                if(command.equals(Protocol.REBALANCE_TOKEN)); actOnRebalance();
 
             }
         }
@@ -74,5 +73,34 @@ public class DStoreToContrThread implements Runnable
             contrPrOut.println(Protocol.REMOVE_ACK_TOKEN + " " + filename);
         }
         catch(Exception e) {System.out.println("Excuse me, " + e);}
+    }
+
+    private void actOnRebalance()
+    {
+        int j=2, i;
+
+        for(i=0; i<Integer.parseInt(comArgs[1]); i++)
+        {
+            String filename = comArgs[j++];
+            int numTos = Integer.parseInt(comArgs[j++]);
+
+            for(int y=0; y<numTos; y++)
+            {
+                int portTo = Integer.parseInt(comArgs[j++]);
+
+                new Thread(new DStoreToDStoreThread(portTo, file_folder, filename)).start();
+            }
+        }
+
+        j++;
+
+        for(; j<comArgs.length; j++)
+        {
+            File file = new File(Paths.get(".").toAbsolutePath().normalize().toString() + File.separator +
+                    file_folder + File.separator + comArgs[j]);
+            file.delete();
+        }
+
+        contrPrOut.println(Protocol.REBALANCE_COMPLETE_TOKEN);
     }
 }

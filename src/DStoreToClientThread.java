@@ -1,3 +1,4 @@
+import java.awt.*;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -45,6 +46,7 @@ public class DStoreToClientThread implements Runnable
 
                 if(command.equals(Protocol.STORE_TOKEN)) actOnStore(); // Client
                 else if(command.equals(Protocol.LOAD_DATA_TOKEN)) actOnLoadData(); // Client
+                else if(command.equals(Protocol.REBALANCE_STORE_TOKEN)) actOnRebalanceStore();
 
                 //else System.out.println("unrecognised command");// Will probably have to call logger here
             }
@@ -114,6 +116,35 @@ public class DStoreToClientThread implements Runnable
             client.close();
         }
         catch(Exception e) {System.out.println("Error when loading file"); e.printStackTrace();}
+    }
 
+    private void actOnRebalanceStore()
+    {
+        if(comArgs.length != 3)
+        {
+            System.out.println("Something wornginwong");
+        }
+
+        String filename = comArgs[1];
+        int filesize = Integer.parseInt(comArgs[2]);
+
+        try
+        {
+            File file = new File(Paths.get(".").toAbsolutePath().normalize().toString() + File.separator +
+                    file_folder + File.separator + filename);
+            file.createNewFile();
+
+            clientPrOut.println(Protocol.ACK_TOKEN);
+
+            byte[] fileContent = new byte[filesize];
+            int readSize = client.getInputStream().readNBytes(fileContent, 0, filesize);
+
+            if(readSize != filesize) throw new Exception("file"  + filename + " received malformed");
+
+            FileOutputStream fileOut = new FileOutputStream(file);
+            fileOut.write(fileContent);
+            fileOut.close();
+        }
+        catch(Exception e) {}
     }
 }
