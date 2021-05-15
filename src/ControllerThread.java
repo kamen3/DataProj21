@@ -23,6 +23,8 @@ class ControllerThread implements Runnable
     private Vector<DStoreIndex> storeVector;
     private ConcurrentHashMap<String, Vector<Integer>> receivedStoreACKs, receivedRemoveACKs;
 
+    private ConcurrentHashMap<String, Integer> loadAttempts;
+
     ReentrantLock loadLock, storeVectorChangeLock, rebalanceLock;
     AtomicInteger storesInProg, removesInProg;
 
@@ -59,6 +61,8 @@ class ControllerThread implements Runnable
         rebalanceLock = rebalanceLock_;
         storesInProg = storesInProg_;
         removesInProg = removesInProg_;
+
+        loadAttempts = new ConcurrentHashMap<String, Integer>();
     }
 
     public void run()
@@ -84,6 +88,8 @@ class ControllerThread implements Runnable
                 else if(command.equals(Protocol.REMOVE_TOKEN)) actOnRemove(); // Client
                 else if(command.equals(Protocol.REMOVE_ACK_TOKEN)) actOnRemoveAck(); // DStore
                 else if(command.equals(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN)) actOnErrorFileNotExist(); // DStore
+                else if(command.equals(Protocol.LOAD_TOKEN)) actOnLoad(); // Client
+                else if(command.equals(Protocol.RELOAD_TOKEN)) actOnReload(); // Client
                 else System.out.println("unrecognised command");// Will probably have to call logger here
             }
 
@@ -302,5 +308,74 @@ class ControllerThread implements Runnable
         /** Logging perhaps which DStore threw the error*/
         //receivedRemoveACKs.get(comArgs[1]).add(client.getPort());
         // I mean, if it already doesn't exist, no reason to forbid others from storing a file with the same name
+    }
+
+    private void actOnLoad()
+    {
+        if (storeIndex.size() < R)
+        {
+            prout.println(Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
+            return;
+        }
+
+        if(comArgs.length != 2)
+        {
+            /** Log later */
+            return;
+        }
+
+        String filename = comArgs[1];
+
+        if(!fileIndex.containsKey(filename) || fileIndexInProg.contains(filename) )
+        {
+            prout.println(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
+            return;
+        }
+
+        loadAttempts.remove(filename);
+        loadAttempts.put(filename, 1);
+
+        FileIndex fileInfo = fileIndex.get(filename);
+        Vector<Integer> DStorePorts = fileInfo.getDStores();
+
+        prout.println(Protocol.LOAD_FROM_TOKEN + " " + Integer.toString(DStorePorts.get(0)) + " " + fileInfo.getFilesize());
+
+    }
+
+    private void actOnReload()
+    {
+        if (storeIndex.size() < R)
+        {
+            prout.println(Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
+            return;
+        }
+
+        if(comArgs.length != 2)
+        {
+            /** Log later */
+            return;
+        }
+
+        String filename = comArgs[1];
+
+        if(!fileIndex.containsKey(filename) || fileIndexInProg.contains(filename) )
+        {
+            prout.println(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
+            return;
+        }
+
+        int attemptNum = loadAttempts.remove(filename);
+        attemptNum++;
+
+        FileIndex fileInfo = fileIndex.get(filename);
+        Vector<Integer> DStorePorts = fileInfo.getDStores();
+        if(attemptNum > DStorePorts.size())
+        {
+            prout.println(Protocol.ERROR_LOAD_TOKEN);
+        }
+
+        loadAttempts.put(filename, attemptNum);
+
+        prout.println(Protocol.LOAD_FROM_TOKEN + " " + Integer.toString(DStorePorts.get(attemptNum-1)) + " " + fileInfo.getFilesize());
     }
 }

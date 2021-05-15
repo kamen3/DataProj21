@@ -22,8 +22,14 @@ public class FileIndex
         DStores.add(port);
     }
 
+    /** Will probably be used in the rebalancing operation, not in the remove,
+     * since there we remove the file wholesale, rather than from certain
+     * DStores
+     * */
     public void removeDStore(Integer port)
     {
         DStores.remove((Object)port);
     }
+
+    public int getFilesize() { return filesize; }
 }

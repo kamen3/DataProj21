@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class DStoreToClientThread implements Runnable
@@ -42,7 +43,8 @@ public class DStoreToClientThread implements Runnable
                 comArgs = inpLine.split(" ");
                 command = comArgs[0];
 
-                if(command.equals(Protocol.STORE_TOKEN)) actOnStore();
+                if(command.equals(Protocol.STORE_TOKEN)) actOnStore(); // Client
+                else if(command.equals(Protocol.LOAD_DATA_TOKEN)) actOnLoadData(); // Client
 
                 //else System.out.println("unrecognised command");// Will probably have to call logger here
             }
@@ -81,5 +83,37 @@ public class DStoreToClientThread implements Runnable
             client.close();
         }
         catch(Exception e) {System.out.println("Excuse me, " + e);}
+    }
+
+    private void actOnLoadData()
+    {
+        if(comArgs.length != 2)
+        {
+            /** Do some logging */
+            return;
+        }
+
+        String filename = comArgs[1];
+        File file = new File(Paths.get(".").toAbsolutePath().normalize().toString() + File.separator +
+                file_folder + File.separator + filename);
+
+        try
+        {
+            if (!file.exists())
+            {
+                client.close();
+                return;
+            }
+
+            byte[] fileContent = new byte[(int)file.length()];
+            FileInputStream fileReader = new FileInputStream(file);
+            fileReader.read(fileContent);
+            fileReader.close();
+
+            client.getOutputStream().write(fileContent);
+            client.close();
+        }
+        catch(Exception e) {System.out.println("Error when loading file"); e.printStackTrace();}
+
     }
 }
