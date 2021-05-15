@@ -197,8 +197,9 @@ class ControllerThread implements Runnable
                     {
                         flag = false;
                         prout.println(Protocol.STORE_COMPLETE_TOKEN);
-                        receivedStoreACKs.remove(filename); // Ditto?
-                        fileIndexInProg.remove(filename); // By leaving it here otherwise, it could be used to know it should be removed in rebalancing!
+                        receivedStoreACKs.remove(filename);
+                        // Actually just leave it
+                        //fileIndexInProg.remove(filename); // By leaving it here otherwise, it could be used to know it should be removed in rebalancing!
                         fileIndex.put(filename, fileInfo);
                         break;
                     }
@@ -209,6 +210,7 @@ class ControllerThread implements Runnable
                     System.out.println("Timed out storing");
                 }
 
+                fileIndexInProg.remove(filename);
                 storesInProg.decrementAndGet();
             }
         }
@@ -278,7 +280,8 @@ class ControllerThread implements Runnable
                     if (receivedRemoveACKs.get(filename).size() == R)
                     {
                         flag = false;
-                        fileIndexInProg.remove(filename); // By leaving it here otherwise, it could be used to know it should be removed in rebalancing!
+                        //nah
+                        //fileIndexInProg.remove(filename); // By leaving it here otherwise, it could be used to know it should be removed in rebalancing!
                         break;
                     }
                 }
@@ -289,8 +292,9 @@ class ControllerThread implements Runnable
                     /** If timed out, "log error" */
                 }
 
+                fileIndexInProg.remove(filename);
                 prout.println(Protocol.REMOVE_COMPLETE_TOKEN);
-                receivedRemoveACKs.remove(filename); // Ditto?
+                receivedRemoveACKs.remove(filename);
 
                 removesInProg.decrementAndGet();
             }
