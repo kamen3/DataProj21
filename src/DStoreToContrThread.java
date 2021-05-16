@@ -89,7 +89,7 @@ public class DStoreToContrThread implements Runnable
             {
                 int portTo = Integer.parseInt(comArgs[j++]);
 
-                new Thread(new DStoreToDStoreThread(portTo, file_folder, filename)).start();
+                new Thread(new DStoreToDStoreThread(portTo, file_folder, filename, port)).start();
             }
         }
 
@@ -97,6 +97,8 @@ public class DStoreToContrThread implements Runnable
 
         for(; j<comArgs.length; j++)
         {
+            if(RebalanceInfo.commandsToSend.get(port).containsKey(comArgs[j])) continue;
+
             File file = new File(Paths.get(".").toAbsolutePath().normalize().toString() + File.separator +
                     file_folder + File.separator + comArgs[j]);
             file.delete();

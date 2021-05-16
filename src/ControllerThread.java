@@ -82,29 +82,32 @@ class ControllerThread implements Runnable
 
             while ((inpLine = bfin.readLine()) != null)
             {
-                comArgs = inpLine.split(" ");
-                command = comArgs[0];
-
-                /** Based on the first command, probably split behaviour into two methods:
-                 *  one for client
-                 *  one for store
-                 *  */
-                if(command.equals(Protocol.JOIN_TOKEN)) actOnJoin(); // DStore
-                else if(command.equals(Protocol.LIST_TOKEN)) actOnList(); // Client
-                else if(command.equals(Protocol.STORE_TOKEN)) actOnStore(); // Client
-                else if(command.equals(Protocol.STORE_ACK_TOKEN)) actOnStoreAck(); // DStore
-                else if(command.equals(Protocol.REMOVE_TOKEN)) actOnRemove(); // Client
-                else if(command.equals(Protocol.REMOVE_ACK_TOKEN)) actOnRemoveAck(); // DStore
-                else if(command.equals(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN)) actOnErrorFileNotExist(); // DStore
-                else if(command.equals(Protocol.LOAD_TOKEN)) actOnLoad(); // Client
-                else if(command.equals(Protocol.RELOAD_TOKEN)) actOnReload(); // Client
-                else if(command.equals(Protocol.REBALANCE_COMPLETE_TOKEN)) receivedACKRebalances.add(1);
-                else System.out.println("unrecognised command");// Will probably have to call logger here
-
-                if(client.isClosed())
+                if(!client.isClosed())
                 {
-                    System.out.println("Well, darn " + client.getPort());
-                    return;
+                    comArgs = inpLine.split(" ");
+                    command = comArgs[0];
+
+                    /** Based on the first command, probably split behaviour into two methods:
+                     *  one for client
+                     *  one for store
+                     *  */
+                    if (command.equals(Protocol.JOIN_TOKEN)) actOnJoin(); // DStore
+                    else if (command.equals(Protocol.LIST_TOKEN)) actOnList(); // Client
+                    else if (command.equals(Protocol.STORE_TOKEN)) actOnStore(); // Client
+                    else if (command.equals(Protocol.STORE_ACK_TOKEN)) actOnStoreAck(); // DStore
+                    else if (command.equals(Protocol.REMOVE_TOKEN)) actOnRemove(); // Client
+                    else if (command.equals(Protocol.REMOVE_ACK_TOKEN)) actOnRemoveAck(); // DStore
+                    else if (command.equals(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN)) actOnErrorFileNotExist(); // DStore
+                    else if (command.equals(Protocol.LOAD_TOKEN)) actOnLoad(); // Client
+                    else if (command.equals(Protocol.RELOAD_TOKEN)) actOnReload(); // Client
+                    else if (command.equals(Protocol.REBALANCE_COMPLETE_TOKEN)) receivedACKRebalances.add(1);
+                    else System.out.println("unrecognised command");// Will probably have to call logger here
+
+                    if (client.isClosed())
+                    {
+                        System.out.println("Well, darn " + client.getPort());
+                        return;
+                    }
                 }
             }
 

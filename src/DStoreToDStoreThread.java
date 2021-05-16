@@ -11,16 +11,18 @@ public class DStoreToDStoreThread implements Runnable
     private Socket client;
     private PrintWriter clientPrOut;
     private BufferedReader clientBfIn;
+    private int portFrom;
 
     String inpLine;
     String[] comArgs;
     String command;
 
-    public DStoreToDStoreThread(int portTo_, String file_folder_, String filename_)
+    public DStoreToDStoreThread(int portTo_, String file_folder_, String filename_, int portFrom_)
     {
         portTo = portTo_;
         file_folder = file_folder_;
         filename = filename_;
+        portFrom = portFrom_;
     }
 
     public void run()
@@ -53,10 +55,15 @@ public class DStoreToDStoreThread implements Runnable
             fileReader.read(fileContent);
             fileReader.close();
 
+            if(RebalanceInfo.commandsToRemove.containsKey(portFrom))
+            {
+                if(RebalanceInfo.commandsToRemove.get(portFrom).contains(filename)) file.delete();
+            }
+
             client.getOutputStream().write(fileContent);
 
             client.close();
         }
-        catch(Exception e) {System.out.println("Something wrong in DStore on DStore");}
+        catch(Exception e) {System.out.println("Something wrong in DStore on DStore"); e.printStackTrace();}
     }
 }
