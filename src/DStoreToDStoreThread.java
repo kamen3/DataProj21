@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Vector;
 
 public class DStoreToDStoreThread implements Runnable
 {
@@ -13,16 +14,19 @@ public class DStoreToDStoreThread implements Runnable
     private BufferedReader clientBfIn;
     private int portFrom;
 
+    Vector<String> toRemove = new Vector<String>();
+
     String inpLine;
     String[] comArgs;
     String command;
 
-    public DStoreToDStoreThread(int portTo_, String file_folder_, String filename_, int portFrom_)
+    public DStoreToDStoreThread(int portTo_, String file_folder_, String filename_, int portFrom_, Vector<String> toRemove_)
     {
         portTo = portTo_;
         file_folder = file_folder_;
         filename = filename_;
         portFrom = portFrom_;
+        toRemove = toRemove_;
     }
 
     public void run()
@@ -39,6 +43,14 @@ public class DStoreToDStoreThread implements Runnable
 
             clientPrOut.println(Protocol.REBALANCE_STORE_TOKEN + " " + filename + " " + filesize);
 
+            /**
+             *
+             *
+             *
+             * Might have to check for timing out
+             *
+             *
+             * */
             inpLine = clientBfIn.readLine();
 
             comArgs = inpLine.split(" ");
@@ -55,14 +67,11 @@ public class DStoreToDStoreThread implements Runnable
             fileReader.read(fileContent);
             fileReader.close();
 
-            if(RebalanceInfo.commandsToRemove.containsKey(portFrom))
-            {
-                if(RebalanceInfo.commandsToRemove.get(portFrom).contains(filename)) file.delete();
-            }
-
             client.getOutputStream().write(fileContent);
 
             client.close();
+
+            if(toRemove.contains(filename)) file.delete();
         }
         catch(Exception e) {System.out.println("Something wrong in DStore on DStore"); e.printStackTrace();}
     }

@@ -20,7 +20,7 @@ public class DStore
         PrintWriter contrPrOut = new PrintWriter(controller.getOutputStream(), true);
         BufferedReader contrBfIn = new BufferedReader(new InputStreamReader(controller.getInputStream()));
 
-        new Thread(new DStoreToContrThread(port, cport, timeout, file_folder, contrPrOut, contrBfIn)).start();
+        new Thread(new DStoreToContrThread(port, cport, timeout, file_folder, controller)).start();
 
         for(;;)
         {

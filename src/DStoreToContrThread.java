@@ -1,8 +1,11 @@
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.Socket;
 import java.nio.file.Paths;
 import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DStoreToContrThread implements Runnable
 {
@@ -12,19 +15,25 @@ public class DStoreToContrThread implements Runnable
     private String file_folder;
     private PrintWriter contrPrOut;
     private BufferedReader contrBfIn;
+    private Socket contrSocket;
 
     String inpLine;
     String[] comArgs;
     String command;
 
-    public DStoreToContrThread(int port_, int cport_, int timeout_, String file_folder_, PrintWriter contrPrOut_, BufferedReader contrBfIn_)
+    public DStoreToContrThread(int port_, int cport_, int timeout_, String file_folder_, Socket contrSocket_)
     {
         port = port_;
         cport = cport_;
         timeout = timeout_;
         file_folder = file_folder_;
-        contrPrOut = contrPrOut_;
-        contrBfIn = contrBfIn_;
+        contrSocket = contrSocket_;
+        try
+        {
+            contrPrOut = new PrintWriter(contrSocket.getOutputStream(), true);
+            contrBfIn = new BufferedReader(new InputStreamReader(contrSocket.getInputStream()));
+        }
+        catch(Exception e) {System.out.println("don't even log");}
     }
 
     public void run()
@@ -78,30 +87,49 @@ public class DStoreToContrThread implements Runnable
 
     private void actOnRebalance()
     {
-        int j=2, i;
+        ConcurrentHashMap<String, Vector<Integer>> commandsToSend = new ConcurrentHashMap<String, Vector<Integer>>();
+        Vector<String> toRemove = new Vector<String>();
+        Vector<String> toSend = new Vector<String>();
 
-        for(i=0; i<Integer.parseInt(comArgs[1]); i++)
+        System.out.println("REB " + inpLine);
+
+        int j=2;
+
+        for(int i=0; i<Integer.parseInt(comArgs[1]); i++)
         {
+            Vector<Integer> tmp = new Vector<Integer>();
+
             String filename = comArgs[j++];
             int numTos = Integer.parseInt(comArgs[j++]);
+            toSend.add(filename);
 
             for(int y=0; y<numTos; y++)
             {
                 int portTo = Integer.parseInt(comArgs[j++]);
-
-                new Thread(new DStoreToDStoreThread(portTo, file_folder, filename, port)).start();
+                tmp.add(portTo);
             }
+            commandsToSend.put(filename, tmp);
         }
 
         j++;
 
         for(; j<comArgs.length; j++)
         {
-            if(RebalanceInfo.commandsToSend.get(port).containsKey(comArgs[j])) continue;
+            toRemove.add(comArgs[j]);
 
+            if(toSend.contains(comArgs[j])) continue;
             File file = new File(Paths.get(".").toAbsolutePath().normalize().toString() + File.separator +
                     file_folder + File.separator + comArgs[j]);
             file.delete();
+        }
+
+        for(int i=0; i<toSend.size(); i++)
+        {
+            Vector<Integer> ports = commandsToSend.get(toSend.get(i));
+            for(int y=0; y<ports.size(); y++)
+            {
+                new Thread(new DStoreToDStoreThread(ports.get(y), file_folder, toSend.get(i), port, toRemove)).start();
+            }
         }
 
         contrPrOut.println(Protocol.REBALANCE_COMPLETE_TOKEN);

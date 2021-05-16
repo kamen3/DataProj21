@@ -5,24 +5,23 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
 
 class ControllerRebalanceDStoreThread2 implements Runnable
 {
     private int port;
-    private HashMap<String, Vector<Integer>> send;
-    Vector<String> remove;
-    Vector<Integer> receivedACKRebalances;
-    Socket DStoreSocket;
+    //private ConcurrentHashMap<String, Vector<Integer>> send;
+    //private Vector<String> remove;
+    private Vector<Integer> receivedACKRebalances;
+    private Socket DStoreSocket;
 
     private BufferedReader bfin;
     private PrintWriter prout;
 
-    public ControllerRebalanceDStoreThread2(int port_, HashMap<String, Vector<Integer>> send_, Vector<String> remove_,
+    public ControllerRebalanceDStoreThread2(int port_,
                                             Vector<Integer> receivedACKRebalances_, Socket DStoreSocket_)
     {
         port = port_;
-        send = send_;
-        remove = remove_;
         receivedACKRebalances = receivedACKRebalances_;
         DStoreSocket = DStoreSocket_;
     }
@@ -38,18 +37,19 @@ class ControllerRebalanceDStoreThread2 implements Runnable
 
             String message = Protocol.REBALANCE_TOKEN;
 
-            if(send != null)
+            if(RebalanceInfo.commandsToSend.get(port) != null)
             {
-                String[] filenamesSend = new String[send.size()];
-                if (send.size() != 0) send.keySet().toArray(filenamesSend);
+                String[] filenamesSend = new String[RebalanceInfo.commandsToSend.get(port).size()];
+                if (RebalanceInfo.commandsToSend.get(port).size() != 0) RebalanceInfo.commandsToSend.get(port).keySet().toArray(filenamesSend);
 
-                message += " " + send.size();
+
+                message += " " + RebalanceInfo.commandsToSend.get(port).size();
 
                 for (int i = 0; i < filenamesSend.length; i++)
                 {
                     message += " " + filenamesSend[i];
 
-                    Vector<Integer> ports = send.get(filenamesSend[i]);
+                    Vector<Integer> ports = RebalanceInfo.commandsToSend.get(port).get(filenamesSend[i]);
 
                     message += " " + ports.size();
 
@@ -61,18 +61,21 @@ class ControllerRebalanceDStoreThread2 implements Runnable
             }
             else message += " 0";
 
-            if(remove != null)
+            if(RebalanceInfo.commandsToRemove.get(port) != null)
             {
-                message += " " + remove.size();
+                message += " " + RebalanceInfo.commandsToRemove.get(port).size();
 
-                for (int i = 0; i < remove.size(); i++)
+                for (int i = 0; i < RebalanceInfo.commandsToRemove.get(port).size(); i++)
                 {
-                    message += " " + remove.get(i);
+                    message += " " + RebalanceInfo.commandsToRemove.get(port).get(i);
                 }
             }
             else message += " 0";
 
-            prout.println(message);
+            if(!DStoreSocket.isClosed())
+            {
+                prout.println(message);
+            }
         }
         catch(Exception e) {System.out.println("uuh oh stinkyyyyy"); e.printStackTrace();}
     }

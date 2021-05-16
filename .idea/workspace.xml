@@ -2,13 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="b710d4eb-24c9-4b3c-ace3-b5e5d427c0c8" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/src/RebalanceInfo.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Controller.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Controller.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ControllerRebalanceDStoreThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/ControllerRebalanceDStoreThread.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ControllerRebalanceDStoreThread2.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/ControllerRebalanceDStoreThread2.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/ControllerRebalanceThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/ControllerRebalanceThread.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ControllerThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/ControllerThread.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/DStore.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/DStore.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/DStoreToContrThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/DStoreToContrThread.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/DStoreToDStoreThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/DStoreToDStoreThread.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/RebalanceInfo.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/RebalanceInfo.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

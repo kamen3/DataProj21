@@ -14,8 +14,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 class ControllerRebalanceDStoreThread implements Runnable
 {
-    ConcurrentHashMap<Integer, Vector<String>> currentDStoreList;
-    ConcurrentHashMap<String, Vector<Integer>> currentTotalFileList;
     Socket DStoreSocket;
     int port;
 
@@ -29,12 +27,8 @@ class ControllerRebalanceDStoreThread implements Runnable
     private AtomicBoolean flag;
 
     /** Should have just made it extend Controller, but oh well... */
-    public ControllerRebalanceDStoreThread(ConcurrentHashMap<Integer, Vector<String>> currentDStoreList_,
-                                           ConcurrentHashMap<String, Vector<Integer>> currentTotalFileList_,
-                                           Socket DStoreSocket_, int port_, AtomicBoolean flag_)
+    public ControllerRebalanceDStoreThread(Socket DStoreSocket_, int port_, AtomicBoolean flag_)
     {
-        currentDStoreList = currentDStoreList_;
-        currentTotalFileList = currentTotalFileList_;
         DStoreSocket = DStoreSocket_;
         port = port_;
         flag = flag_;
@@ -58,16 +52,16 @@ class ControllerRebalanceDStoreThread implements Runnable
             {
                 String filename = comArgs[i];
                 files.add(filename);
-                if(!currentTotalFileList.containsKey(filename))
+                if(!RebalanceInfo.currentTotalFileList.containsKey(filename))
                 {
                     Vector<Integer> tmp = new Vector<Integer>();
                     tmp.add(port);
-                    currentTotalFileList.put(filename, tmp);
+                    RebalanceInfo.currentTotalFileList.put(filename, tmp);
                 }
-                else currentTotalFileList.get(filename).add(port);
+                else RebalanceInfo.currentTotalFileList.get(filename).add(port);
             }
 
-            currentDStoreList.put(port, files);
+            RebalanceInfo.currentDStoreList.put(port, files);
 
             flag.set(false);
         }
