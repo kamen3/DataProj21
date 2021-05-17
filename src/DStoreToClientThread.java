@@ -130,9 +130,9 @@ public class DStoreToClientThread implements Runnable
 
         try
         {
+            System.out.println("I am creating " + filename);
             File file = new File(Paths.get(".").toAbsolutePath().normalize().toString() + File.separator +
                     file_folder + File.separator + filename);
-            file.createNewFile();
 
             clientPrOut.println(Protocol.ACK_TOKEN);
 
@@ -141,10 +141,9 @@ public class DStoreToClientThread implements Runnable
 
             if(readSize != filesize) throw new Exception("file"  + filename + " received malformed");
 
-            FileOutputStream fileOut = new FileOutputStream(file);
-            fileOut.write(fileContent);
-            fileOut.close();
+            Files.write(file.toPath(), fileContent);
+            System.out.println("I created " + filename);
         }
-        catch(Exception e) {}
+        catch(Exception e) {System.out.println("Did not store correctly"); e.printStackTrace();}
     }
 }

@@ -35,6 +35,11 @@ public class DStoreIndex implements Comparable
         return files;
     }
 
+    public String toString()
+    {
+        return (port + ">" + files.size());
+    }
+
     @Override
     public int compareTo(Object o)
     {

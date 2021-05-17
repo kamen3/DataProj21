@@ -3,6 +3,7 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class DStoreToDStoreThread implements Runnable
 {
@@ -13,6 +14,7 @@ public class DStoreToDStoreThread implements Runnable
     private PrintWriter clientPrOut;
     private BufferedReader clientBfIn;
     private int portFrom;
+    private Vector<Integer> acks;
 
     Vector<String> toRemove = new Vector<String>();
 
@@ -20,13 +22,14 @@ public class DStoreToDStoreThread implements Runnable
     String[] comArgs;
     String command;
 
-    public DStoreToDStoreThread(int portTo_, String file_folder_, String filename_, int portFrom_, Vector<String> toRemove_)
+    public DStoreToDStoreThread(int portTo_, String file_folder_, String filename_, int portFrom_, Vector<String> toRemove_, Vector<Integer> acks_)
     {
         portTo = portTo_;
         file_folder = file_folder_;
         filename = filename_;
         portFrom = portFrom_;
         toRemove = toRemove_;
+        acks = acks_;
     }
 
     public void run()
@@ -72,6 +75,8 @@ public class DStoreToDStoreThread implements Runnable
             client.close();
 
             if(toRemove.contains(filename)) file.delete();
+
+            acks.add(1);
         }
         catch(Exception e) {System.out.println("Something wrong in DStore on DStore"); e.printStackTrace();}
     }

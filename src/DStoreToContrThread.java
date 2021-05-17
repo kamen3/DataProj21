@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.nio.file.Paths;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class DStoreToContrThread implements Runnable
 {
@@ -123,15 +124,23 @@ public class DStoreToContrThread implements Runnable
             file.delete();
         }
 
+        Vector<Integer> acks = new Vector<Integer>();
+        int intended=0;
         for(int i=0; i<toSend.size(); i++)
         {
             Vector<Integer> ports = commandsToSend.get(toSend.get(i));
             for(int y=0; y<ports.size(); y++)
             {
-                new Thread(new DStoreToDStoreThread(ports.get(y), file_folder, toSend.get(i), port, toRemove)).start();
+                new Thread(new DStoreToDStoreThread(ports.get(y), file_folder, toSend.get(i), port, toRemove, acks)).start();
+                /** Why do I send MY file folder? */
+                intended++;
             }
         }
 
+        while(acks.size() < intended)
+        {
+            /** Wait */
+        }
         contrPrOut.println(Protocol.REBALANCE_COMPLETE_TOKEN);
     }
 

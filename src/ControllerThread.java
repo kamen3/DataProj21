@@ -23,7 +23,7 @@ class ControllerThread implements Runnable
     private ConcurrentHashMap<Integer, Socket> storeIndex;
     private Vector<DStoreIndex> storeVector;
     private ConcurrentHashMap<String, Vector<Integer>> receivedStoreACKs, receivedRemoveACKs;
-    Vector<Integer> receivedACKRebalances;
+    private Vector<Integer> receivedACKRebalances;
 
     private ConcurrentHashMap<String, Integer> loadAttempts;
 
@@ -100,7 +100,11 @@ class ControllerThread implements Runnable
                     else if (command.equals(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN)) actOnErrorFileNotExist(); // DStore
                     else if (command.equals(Protocol.LOAD_TOKEN)) actOnLoad(); // Client
                     else if (command.equals(Protocol.RELOAD_TOKEN)) actOnReload(); // Client
-                    else if (command.equals(Protocol.REBALANCE_COMPLETE_TOKEN)) receivedACKRebalances.add(1);
+                    else if (command.equals(Protocol.REBALANCE_COMPLETE_TOKEN))
+                    {
+                        System.out.println("rebalance complete from " + client.getPort());
+                        receivedACKRebalances.add(1);
+                    }
                     else System.out.println("unrecognised command");// Will probably have to call logger here
 
                     if (client.isClosed())
