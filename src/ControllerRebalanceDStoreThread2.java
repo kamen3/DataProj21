@@ -75,8 +75,9 @@ class ControllerRebalanceDStoreThread2 implements Runnable
             if(!DStoreSocket.isClosed())
             {
                 prout.println(message);
+                ControllerLogger.getInstance().messageSent(DStoreSocket, message);
             }
         }
-        catch(Exception e) {System.out.println("uuh oh stinkyyyyy"); e.printStackTrace();}
+        catch(Exception e) {}
     }
 }

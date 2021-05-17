@@ -34,7 +34,7 @@ public class DStoreToContrThread implements Runnable
             contrPrOut = new PrintWriter(contrSocket.getOutputStream(), true);
             contrBfIn = new BufferedReader(new InputStreamReader(contrSocket.getInputStream()));
         }
-        catch(Exception e) {System.out.println("don't even log");}
+        catch(Exception e) {}
     }
 
     public void run()
@@ -42,9 +42,11 @@ public class DStoreToContrThread implements Runnable
         try
         {
             contrPrOut.println(Protocol.JOIN_TOKEN + " " + Integer.toString(port));
+            DstoreLogger.getInstance().messageSent(contrSocket, Protocol.JOIN_TOKEN + " " + Integer.toString(port));
 
             while ((inpLine = contrBfIn.readLine()) != null)
             {
+                DstoreLogger.getInstance().messageReceived(contrSocket, inpLine);
                 comArgs = inpLine.split(" ");
                 command = comArgs[0];
 
@@ -52,7 +54,6 @@ public class DStoreToContrThread implements Runnable
                 if(command.equals(Protocol.REMOVE_TOKEN)) actOnRemove();
                 else if(command.equals(Protocol.REBALANCE_TOKEN)) actOnRebalance();
                 else if(command.equals(Protocol.LIST_TOKEN)) actOnList();
-                else System.out.println("Some unknown command given from Controller");
             }
         }
         catch(Exception e) {}
@@ -62,7 +63,6 @@ public class DStoreToContrThread implements Runnable
     {
         if(comArgs.length != 2)
         {
-            /** Do some logging */
             return;
         }
 
@@ -76,14 +76,16 @@ public class DStoreToContrThread implements Runnable
             if(!file.exists())
             {
                 contrPrOut.println(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
+                DstoreLogger.getInstance().messageSent(contrSocket, Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
                 return;
             }
 
             file.delete();
 
             contrPrOut.println(Protocol.REMOVE_ACK_TOKEN + " " + filename);
+            DstoreLogger.getInstance().messageSent(contrSocket, Protocol.REMOVE_ACK_TOKEN + " " + filename);
         }
-        catch(Exception e) {System.out.println("Excuse me, " + e);}
+        catch(Exception e) {}
     }
 
     private void actOnRebalance()
@@ -91,8 +93,6 @@ public class DStoreToContrThread implements Runnable
         ConcurrentHashMap<String, Vector<Integer>> commandsToSend = new ConcurrentHashMap<String, Vector<Integer>>();
         Vector<String> toRemove = new Vector<String>();
         Vector<String> toSend = new Vector<String>();
-
-        System.out.println("REB " + inpLine);
 
         int j=2;
 
@@ -132,7 +132,6 @@ public class DStoreToContrThread implements Runnable
             for(int y=0; y<ports.size(); y++)
             {
                 new Thread(new DStoreToDStoreThread(ports.get(y), file_folder, toSend.get(i), port, toRemove, acks)).start();
-                /** Why do I send MY file folder? */
                 intended++;
             }
         }
@@ -142,6 +141,7 @@ public class DStoreToContrThread implements Runnable
             /** Wait */
         }
         contrPrOut.println(Protocol.REBALANCE_COMPLETE_TOKEN);
+        DstoreLogger.getInstance().messageSent(contrSocket, Protocol.REBALANCE_COMPLETE_TOKEN);
     }
 
     private void actOnList()
@@ -157,5 +157,6 @@ public class DStoreToContrThread implements Runnable
         }
 
         contrPrOut.println(message);
+        DstoreLogger.getInstance().messageSent(contrSocket, message);
     }
 }

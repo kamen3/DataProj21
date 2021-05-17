@@ -42,9 +42,11 @@ class ControllerRebalanceDStoreThread implements Runnable
             prout = new PrintWriter(DStoreSocket.getOutputStream(), true);
 
             prout.println(Protocol.LIST_TOKEN);
+            ControllerLogger.getInstance().messageSent(DStoreSocket, Protocol.LIST_TOKEN);
 
             if(DStoreSocket.isClosed()) return;
             inpLine = bfin.readLine();
+            ControllerLogger.getInstance().messageReceived(DStoreSocket, inpLine);
             comArgs = inpLine.split(" ");
 
             Vector<String> files = new Vector<String>();
@@ -65,6 +67,6 @@ class ControllerRebalanceDStoreThread implements Runnable
 
             flag.set(false);
         }
-        catch(Exception e) {System.out.println("uuh oh stinkyyyyyyyyyyyyyyyyyyyyyyy"); e.printStackTrace();}
+        catch(Exception e) {}
     }
 }

@@ -45,6 +45,7 @@ public class DStoreToDStoreThread implements Runnable
             int filesize = (int)file.length();
 
             clientPrOut.println(Protocol.REBALANCE_STORE_TOKEN + " " + filename + " " + filesize);
+            DstoreLogger.getInstance().messageSent(client, Protocol.REBALANCE_STORE_TOKEN + " " + filename + " " + filesize);
 
             /**
              *
@@ -55,14 +56,15 @@ public class DStoreToDStoreThread implements Runnable
              *
              * */
             inpLine = clientBfIn.readLine();
+            DstoreLogger.getInstance().messageReceived(client, inpLine);
 
             comArgs = inpLine.split(" ");
             command = comArgs[0];
 
             if(comArgs.length != 1 && !command.equals(Protocol.ACK_TOKEN))
             {
-                System.out.println("really stinky");
                 /** Probably logging */
+                return;
             }
 
             byte[] fileContent = new byte[filesize];
@@ -78,6 +80,6 @@ public class DStoreToDStoreThread implements Runnable
 
             acks.add(1);
         }
-        catch(Exception e) {System.out.println("Something wrong in DStore on DStore"); e.printStackTrace();}
+        catch(Exception e) {}
     }
 }

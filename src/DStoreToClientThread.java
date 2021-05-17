@@ -16,12 +16,14 @@ public class DStoreToClientThread implements Runnable
     private Socket client;
     private PrintWriter clientPrOut;
     private BufferedReader clientBfIn;
+    private Socket contrSocket;
 
     String inpLine;
     String[] comArgs;
     String command;
 
-    public DStoreToClientThread(Socket client_, int port_, int cport_, int timeout_, String file_folder_, PrintWriter contrPrOut_, BufferedReader contrBfIn_)
+    public DStoreToClientThread(Socket client_, int port_, int cport_, int timeout_, String file_folder_, PrintWriter contrPrOut_, BufferedReader contrBfIn_,
+                                Socket contrSocket_)
     {
         client = client_;
         port = port_;
@@ -30,6 +32,7 @@ public class DStoreToClientThread implements Runnable
         file_folder = file_folder_;
         contrPrOut = contrPrOut_;
         contrBfIn = contrBfIn_;
+        contrSocket = contrSocket_;
     }
 
     public void run()
@@ -41,14 +44,13 @@ public class DStoreToClientThread implements Runnable
 
             while ((inpLine = clientBfIn.readLine()) != null)
             {
+                DstoreLogger.getInstance().messageReceived(client, inpLine);
                 comArgs = inpLine.split(" ");
                 command = comArgs[0];
 
                 if(command.equals(Protocol.STORE_TOKEN)) actOnStore(); // Client
                 else if(command.equals(Protocol.LOAD_DATA_TOKEN)) actOnLoadData(); // Client
                 else if(command.equals(Protocol.REBALANCE_STORE_TOKEN)) actOnRebalanceStore();
-
-                //else System.out.println("unrecognised command");// Will probably have to call logger here
             }
         }
         catch(Exception e) {}
@@ -69,6 +71,7 @@ public class DStoreToClientThread implements Runnable
         try
         {
             clientPrOut.println(Protocol.ACK_TOKEN);
+            DstoreLogger.getInstance().messageSent(client, Protocol.ACK_TOKEN);
             int readsize = client.getInputStream().readNBytes(fileContent, 0, filesize);
             if(readsize != filesize) throw new Exception("file"  + filename + " received malformed");
 
@@ -81,17 +84,17 @@ public class DStoreToClientThread implements Runnable
             fileOut.close();
 
             contrPrOut.println(Protocol.STORE_ACK_TOKEN + " " + filename);
+            DstoreLogger.getInstance().messageSent(contrSocket, Protocol.STORE_ACK_TOKEN + " " + filename);
 
             client.close();
         }
-        catch(Exception e) {System.out.println("Excuse me, " + e);}
+        catch(Exception e) {}
     }
 
     private void actOnLoadData()
     {
         if(comArgs.length != 2)
         {
-            /** Do some logging */
             return;
         }
 
@@ -115,14 +118,14 @@ public class DStoreToClientThread implements Runnable
             client.getOutputStream().write(fileContent);
             client.close();
         }
-        catch(Exception e) {System.out.println("Error when loading file"); e.printStackTrace();}
+        catch(Exception e) {}
     }
 
     private void actOnRebalanceStore()
     {
         if(comArgs.length != 3)
         {
-            System.out.println("Something wornginwong");
+            return;
         }
 
         String filename = comArgs[1];
@@ -130,11 +133,11 @@ public class DStoreToClientThread implements Runnable
 
         try
         {
-            System.out.println("I am creating " + filename);
             File file = new File(Paths.get(".").toAbsolutePath().normalize().toString() + File.separator +
                     file_folder + File.separator + filename);
 
             clientPrOut.println(Protocol.ACK_TOKEN);
+            DstoreLogger.getInstance().messageSent(client, Protocol.ACK_TOKEN);
 
             byte[] fileContent = new byte[filesize];
             int readSize = client.getInputStream().readNBytes(fileContent, 0, filesize);
@@ -142,8 +145,7 @@ public class DStoreToClientThread implements Runnable
             if(readSize != filesize) throw new Exception("file"  + filename + " received malformed");
 
             Files.write(file.toPath(), fileContent);
-            System.out.println("I created " + filename);
         }
-        catch(Exception e) {System.out.println("Did not store correctly"); e.printStackTrace();}
+        catch(Exception e) {}
     }
 }

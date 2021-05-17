@@ -12,6 +12,8 @@ public class DStore
         final int timeout = Integer.parseInt(args[2]);
         final String file_folder = args[3];
 
+        DstoreLogger.init(Logger.LoggingType.ON_FILE_AND_TERMINAL, port);
+
         File folder = new File(Paths.get(".").toAbsolutePath().normalize().toString() + File.separator + file_folder);
         folder.mkdirs();
 
@@ -27,7 +29,7 @@ public class DStore
             try
             {
                 Socket client = ss.accept();
-                new Thread(new DStoreToClientThread(client, port, cport, timeout, file_folder, contrPrOut, contrBfIn)).start();
+                new Thread(new DStoreToClientThread(client, port, cport, timeout, file_folder, contrPrOut, contrBfIn, controller)).start();
             }
             catch(Exception e){}
         }

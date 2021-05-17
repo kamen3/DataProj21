@@ -84,6 +84,7 @@ class ControllerThread implements Runnable
             {
                 if(!client.isClosed())
                 {
+                    ControllerLogger.getInstance().messageReceived(client, inpLine);
                     comArgs = inpLine.split(" ");
                     command = comArgs[0];
 
@@ -102,14 +103,11 @@ class ControllerThread implements Runnable
                     else if (command.equals(Protocol.RELOAD_TOKEN)) actOnReload(); // Client
                     else if (command.equals(Protocol.REBALANCE_COMPLETE_TOKEN))
                     {
-                        System.out.println("rebalance complete from " + client.getPort());
                         receivedACKRebalances.add(1);
                     }
-                    else System.out.println("unrecognised command");// Will probably have to call logger here
 
                     if (client.isClosed())
                     {
-                        System.out.println("Well, darn " + client.getPort());
                         return;
                     }
                 }
@@ -119,12 +117,13 @@ class ControllerThread implements Runnable
             prout.close();
             client.close();
         }
-        catch(Exception e) {System.out.println("uuh oh stinkyyyyy"); e.printStackTrace();}
+        catch(Exception e) {}
     }
 
     private void actOnJoin()
     {
         waitingDStores.add(new JoinDStoreInfoPair(Integer.parseInt(comArgs[1]), client));
+        ControllerLogger.getInstance().dstoreJoined(client, Integer.parseInt(comArgs[1]));
         /** Rebalance handled elsewhere */
     }
 
@@ -135,6 +134,7 @@ class ControllerThread implements Runnable
             if (storeIndex.size() < R)
             {
                 prout.println(Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
+                ControllerLogger.getInstance().messageSent(client, Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
                 return;
             }
 
@@ -155,8 +155,9 @@ class ControllerThread implements Runnable
                 }
             }
             prout.println(message);
+            ControllerLogger.getInstance().messageSent(client, message);
         }
-        catch(Exception e){System.out.println("uh oh stinky2"); e.printStackTrace();}
+        catch(Exception e){}
     }
 
     private void actOnStore()
@@ -164,14 +165,11 @@ class ControllerThread implements Runnable
         if (storeIndex.size() < R)
         {
             prout.println(Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
+            ControllerLogger.getInstance().messageSent(client, Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
             return;
         }
 
-        if(comArgs.length != 3)
-        {
-            /** Log later */
-            return;
-        }
+        if(comArgs.length != 3) return;
 
         String filename = comArgs[1];
         int filesize = Integer.parseInt(comArgs[2]);
@@ -179,6 +177,7 @@ class ControllerThread implements Runnable
         if(fileIndex.containsKey(filename) || fileIndexInProg.contains(filename) )
         {
             prout.println(Protocol.ERROR_FILE_ALREADY_EXISTS_TOKEN);
+            ControllerLogger.getInstance().messageSent(client, Protocol.ERROR_FILE_ALREADY_EXISTS_TOKEN);
             return;
         }
 
@@ -203,12 +202,12 @@ class ControllerThread implements Runnable
                     fileInfo.addNewDStore(storeVector.get(i).getPort());
                 }
 
-                /** Release the lock */
                 storeVectorChangeLock.unlock();
 
                 receivedStoreACKs.put(filename, new Vector<Integer>());
 
                 prout.println(message);
+                ControllerLogger.getInstance().messageSent(client, message);
 
                 long startTime = System.currentTimeMillis();
                 Boolean flag=true;
@@ -218,6 +217,7 @@ class ControllerThread implements Runnable
                     {
                         flag = false;
                         prout.println(Protocol.STORE_COMPLETE_TOKEN);
+                        ControllerLogger.getInstance().messageSent(client, Protocol.STORE_COMPLETE_TOKEN);
                         receivedStoreACKs.remove(filename);
                         // Actually just leave it
                         //fileIndexInProg.remove(filename); // By leaving it here otherwise, it could be used to know it should be removed in rebalancing!
@@ -228,14 +228,13 @@ class ControllerThread implements Runnable
                 if(flag)
                 {
                     /** If timed out, do nothing */
-                    System.out.println("Timed out storing");
                 }
 
                 fileIndexInProg.remove(filename);
                 storesInProg.decrementAndGet();
             }
         }
-        catch(Exception e) {System.out.println("stinkyyy"); e.printStackTrace();}
+        catch(Exception e) {}
     }
 
     private void actOnStoreAck()
@@ -248,12 +247,12 @@ class ControllerThread implements Runnable
         if (storeIndex.size() < R)
         {
             prout.println(Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
+            ControllerLogger.getInstance().messageSent(client, Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
             return;
         }
 
         if(comArgs.length != 2)
         {
-            /** Log later */
             return;
         }
 
@@ -262,6 +261,7 @@ class ControllerThread implements Runnable
         if(!fileIndex.containsKey(filename) || fileIndexInProg.contains(filename) )
         {
             prout.println(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
+            ControllerLogger.getInstance().messageSent(client, Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
             return;
         }
 
@@ -292,6 +292,7 @@ class ControllerThread implements Runnable
                 {
                     DStorePrWr = new PrintWriter(storeIndex.get(DStorePorts.get(i)).getOutputStream(), true);
                     DStorePrWr.println(Protocol.REMOVE_TOKEN + " " + filename);
+                    ControllerLogger.getInstance().messageSent(storeIndex.get(DStorePorts.get(i)), Protocol.REMOVE_TOKEN + " " + filename);
                 }
 
                 long startTime = System.currentTimeMillis();
@@ -309,18 +310,18 @@ class ControllerThread implements Runnable
 
                 if(flag)
                 {
-                    System.out.println("Timed out removing");
-                    /** If timed out, "log error" */
+                    //System.out.println("Timed out removing");
                 }
 
                 fileIndexInProg.remove(filename);
                 prout.println(Protocol.REMOVE_COMPLETE_TOKEN);
+                ControllerLogger.getInstance().messageSent(client, Protocol.REMOVE_COMPLETE_TOKEN);
                 receivedRemoveACKs.remove(filename);
 
                 removesInProg.decrementAndGet();
             }
         }
-        catch(Exception e) {System.out.println("stinkyyy2"); e.printStackTrace();}
+        catch(Exception e) {}
     }
 
     private void actOnRemoveAck()
@@ -340,12 +341,12 @@ class ControllerThread implements Runnable
         if (storeIndex.size() < R)
         {
             prout.println(Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
+            ControllerLogger.getInstance().messageSent(client, Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
             return;
         }
 
         if(comArgs.length != 2)
         {
-            /** Log later */
             return;
         }
 
@@ -354,6 +355,7 @@ class ControllerThread implements Runnable
         if(!fileIndex.containsKey(filename) || fileIndexInProg.contains(filename) )
         {
             prout.println(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
+            ControllerLogger.getInstance().messageSent(client, Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
             return;
         }
 
@@ -364,6 +366,7 @@ class ControllerThread implements Runnable
         Vector<Integer> DStorePorts = fileInfo.getDStores();
 
         prout.println(Protocol.LOAD_FROM_TOKEN + " " + Integer.toString(DStorePorts.get(0)) + " " + fileInfo.getFilesize());
+        ControllerLogger.getInstance().messageSent(client, Protocol.LOAD_FROM_TOKEN + " " + Integer.toString(DStorePorts.get(0)) + " " + fileInfo.getFilesize());
 
     }
 
@@ -372,12 +375,12 @@ class ControllerThread implements Runnable
         if (storeIndex.size() < R)
         {
             prout.println(Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
+            ControllerLogger.getInstance().messageSent(client, Protocol.ERROR_NOT_ENOUGH_DSTORES_TOKEN);
             return;
         }
 
         if(comArgs.length != 2)
         {
-            /** Log later */
             return;
         }
 
@@ -386,6 +389,7 @@ class ControllerThread implements Runnable
         if(!fileIndex.containsKey(filename) || fileIndexInProg.contains(filename) )
         {
             prout.println(Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
+            ControllerLogger.getInstance().messageSent(client, Protocol.ERROR_FILE_DOES_NOT_EXIST_TOKEN);
             return;
         }
 
@@ -397,10 +401,12 @@ class ControllerThread implements Runnable
         if(attemptNum > DStorePorts.size())
         {
             prout.println(Protocol.ERROR_LOAD_TOKEN);
+            ControllerLogger.getInstance().messageSent(client, Protocol.ERROR_LOAD_TOKEN);
         }
 
         loadAttempts.put(filename, attemptNum);
 
         prout.println(Protocol.LOAD_FROM_TOKEN + " " + Integer.toString(DStorePorts.get(attemptNum-1)) + " " + fileInfo.getFilesize());
+        ControllerLogger.getInstance().messageSent(client, Protocol.LOAD_FROM_TOKEN + " " + Integer.toString(DStorePorts.get(attemptNum-1)) + " " + fileInfo.getFilesize());
     }
 }

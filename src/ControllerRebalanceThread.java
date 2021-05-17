@@ -33,15 +33,8 @@ class ControllerRebalanceThread implements Runnable
     private ReentrantLock storeVectorChangeLock, rebalanceLock;
     private AtomicInteger storesInProg, removesInProg;
 
-    private BufferedReader bfin;
-    private PrintWriter prout;
-
     private AtomicLong lastRebalance;
     Vector<JoinDStoreInfoPair> waitingDStores;
-
-    private String inpLine;
-    private String[] comArgs;
-    private String command;
 
     /** Should have just made it extend Controller, but oh well... */
     public ControllerRebalanceThread(int R_, int timeout_, int rebalance_period_, ConcurrentLinkedQueue<String[]> commandQueue_,
@@ -158,19 +151,6 @@ class ControllerRebalanceThread implements Runnable
                             continue;
                         }
 
-                        for(int i=0; i<storeVector.size(); i++)
-                        {
-                            int curDStore = storeVector.get(i).getPort();
-                            Vector<String> actualFiles = RebalanceInfo.currentDStoreList.get(curDStore);
-
-                            if (actualFiles == null) continue;
-                            System.out.println("1 Port " + curDStore + " has " + actualFiles.size() + ", but in the vector it's " + storeVector.get(i).getNumFiles());
-                            //System.out.println(actualFiles.toString());
-                        }
-
-
-
-
                         /** So check if there's any files below or above R, and fill up the numbers by redistributing them randomly,
                          *  and do that by simply starting to build the messages early and including that info there
                          */
@@ -192,7 +172,6 @@ class ControllerRebalanceThread implements Runnable
                                         curNum++;
                                         DStoreIndex DStoreTo = storeVector.get(y);
                                         DStoreTo.addFile(file);
-                                        System.out.println("addd1");
                                         int from = RebalanceInfo.currentTotalFileList.get(file).get(new Random().nextInt(RebalanceInfo.currentTotalFileList.get(file).size()));
                                         if(!RebalanceInfo.commandsToSend.containsKey(from))
                                         {
@@ -203,19 +182,16 @@ class ControllerRebalanceThread implements Runnable
                                             tmp2.add(DStoreTo.getPort());
                                             tmp.put(file, tmp2);
                                             RebalanceInfo.commandsToSend.put(from, tmp);
-                                            System.out.println("send10");
                                         }
                                         else if(!RebalanceInfo.commandsToSend.get(from).containsKey(file))
                                         {
                                             Vector<Integer> tmp = new Vector<Integer>();
                                             tmp.add(DStoreTo.getPort());
                                             RebalanceInfo.commandsToSend.get(from).put(file, tmp);
-                                            System.out.println("send9");
                                         }
                                         else
                                         {
                                             RebalanceInfo.commandsToSend.get(from).get(file).add(DStoreTo.getPort());
-                                            System.out.println("send8");
                                         }
 
                                         if(!RebalanceInfo.filesToReceive.containsKey(DStoreTo.getPort()))
@@ -248,12 +224,10 @@ class ControllerRebalanceThread implements Runnable
                                             Vector<String> tmp = new Vector<String>();
                                             tmp.add(file);
                                             RebalanceInfo.commandsToRemove.put(DStoreTo.getPort(), tmp);
-                                            System.out.println("rem8");
                                         }
                                         else
                                         {
                                             RebalanceInfo.commandsToRemove.get(DStoreTo.getPort()).add(file);
-                                            System.out.println("rem7");
                                         }
                                     }
                                 }
@@ -278,7 +252,6 @@ class ControllerRebalanceThread implements Runnable
                             Vector<String> actualFiles = RebalanceInfo.currentDStoreList.get(curDStore);
 
                             if(actualFiles == null) continue;
-                            //System.out.println("2 Port " + curDStore + " has " + actualFiles.size() + ", but in the vector it's " + storeVector.get(i).getNumFiles());
                             for(int y=0; y<actualFiles.size(); y++)
                             {
                                 String file = actualFiles.get(y);
@@ -290,17 +263,14 @@ class ControllerRebalanceThread implements Runnable
                                         Vector<String> tmp = new Vector<String>();
                                         tmp.add(file);
                                         RebalanceInfo.commandsToRemove.put(curDStore, tmp);
-                                        System.out.println("rem6");
                                     }
                                     else
                                     {
                                         RebalanceInfo.commandsToRemove.get(curDStore).add(file);
-                                        System.out.println("rem5");
                                     }
                                 }
                             }
                         }
-                        System.out.println("passes the loop");
 
                         /** So now take from the ones that have the most files and redistribute to the ones that
                          *  have the least (by picking randomly?)
@@ -316,7 +286,7 @@ class ControllerRebalanceThread implements Runnable
                          * There should be guaranteed a choice, cuz otherwise it'd be really weird????
                          * */
                         balance();
-                        balance(); /** Do twice to smoothe thigns out in case of an odd number of DStores */
+                        balance(); /** Do twice to smoothe things out in case of an odd number of DStores */
 
                         receivedACKRebalances.removeAllElements();
 
@@ -341,39 +311,20 @@ class ControllerRebalanceThread implements Runnable
                         if(flag)
                         {
                             /** If timed out, do nothing */
-                            System.out.println("Timed out rebalancing");
-
                         }
-
-                        /**
-                         * Will have to do thread splitting when sending the finalized commands to the DStores
-                         * and look for timeout there as well
-                         * **/
-
-                        /**
-                         * Check carefully if you're handling the fileIndex, storeVector etc collection properly
-                         * and they have accurate information at the end of it all
-                         *
-                         * One thought I had was to simply rebuild them?
-                         * But then if DStores fail to do their job properly?
-                         * Think carefully
-                         * */
 
                         lastRebalance.set(System.currentTimeMillis());
                         storeVectorChangeLock.unlock();
-                        System.out.println("==========================");
                     }
                 }
             }
         }
-        catch(Exception e) {System.out.println("uuh oh stinkyyyyy3"); e.printStackTrace();}
+        catch(Exception e) {}
     }
 
     private void balance()
     {
         storeVector.sort(null);
-
-        //System.out.println("Before balance: " + storeVector.toString());
 
         for(int i=0; i<storeVector.size()/2; i++)
         {
@@ -410,19 +361,16 @@ class ControllerRebalanceThread implements Runnable
                             tmp2.add(lowPort);
                             tmp.put(file,tmp2);
                             RebalanceInfo.commandsToSend.put(highPort, tmp);
-                            System.out.println("send6");
                         }
                         else if(!RebalanceInfo.commandsToSend.get(highPort).containsKey(file))
                         {
                             Vector<Integer> tmp = new Vector<Integer>();
                             tmp.add(lowPort);
                             RebalanceInfo.commandsToSend.get(highPort).put(file, tmp);
-                            System.out.println("send5");
                         }
                         else
                         {
                             RebalanceInfo.commandsToSend.get(highPort).get(file).add(lowPort);
-                            System.out.println("send4");
                         }
 
                         if(!RebalanceInfo.commandsToRemove.containsKey(highPort))
@@ -430,12 +378,10 @@ class ControllerRebalanceThread implements Runnable
                             Vector<String> tmp = new Vector<String>();
                             tmp.add(file);
                             RebalanceInfo.commandsToRemove.put(highPort, tmp);
-                            System.out.println("rem4");
                         }
                         else
                         {
                             RebalanceInfo.commandsToRemove.get(highPort).add(file);
-                            System.out.println("rem3");
                         }
 
                         break;
@@ -458,18 +404,15 @@ class ControllerRebalanceThread implements Runnable
                             tmp2.add(lowPort);
                             tmp.put(file,tmp2);
                             RebalanceInfo.commandsToSend.put(highPort, tmp);
-                            System.out.println("send3");
                         }
                         else if(!RebalanceInfo.commandsToSend.get(highPort).containsKey(file))
                         {
                             Vector<Integer> tmp = new Vector<Integer>();
                             tmp.add(lowPort);
                             RebalanceInfo.commandsToSend.get(highPort).put(file, tmp);
-                            System.out.println("send2");
                         }
                         else
                         {
-                            System.out.println("send1");
                             RebalanceInfo.commandsToSend.get(highPort).get(file).add(lowPort);
                         }
 
@@ -478,12 +421,10 @@ class ControllerRebalanceThread implements Runnable
                             Vector<String> tmp = new Vector<String>();
                             tmp.add(file);
                             RebalanceInfo.commandsToRemove.put(highPort, tmp);
-                            System.out.println("rem2");
                         }
                         else
                         {
                             RebalanceInfo.commandsToRemove.get(highPort).add(file);
-                            System.out.println("rem1");
                         }
 
                         break;
@@ -491,7 +432,5 @@ class ControllerRebalanceThread implements Runnable
                 }
             }
         }
-
-        //System.out.println("After balance: " + storeVector.toString());
     }
 }

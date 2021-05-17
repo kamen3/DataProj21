@@ -16,6 +16,8 @@ public class Controller
     {
         try
         {
+            ControllerLogger.init(Logger.LoggingType.ON_FILE_AND_TERMINAL);
+
             int cport = Integer.parseInt(args[0]);
             int R = Integer.parseInt(args[1]);
             int timeout = Integer.parseInt(args[2]);
@@ -64,10 +66,9 @@ public class Controller
                             storeIndex, receivedStoreACKs, receivedRemoveACKs, storeVector, storeVectorChangeLock, rebalanceLock, storesInProg,
                             removesInProg, lastRebalance, waitingDStores, receivedACKRebalances)).start();
                 }
-                catch(Exception e){System.out.println("error22 "+e);}
+                catch(Exception e){}
             }
         }
-        catch(Exception e){System.out.println("error "+e);}
-        System.out.println();
+        catch(Exception e){}
     }
 }
