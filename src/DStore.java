@@ -3,7 +3,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Paths;
 
-public class DStore
+public class Dstore
 {
     public static void main(String[] args) throws IOException
     {
